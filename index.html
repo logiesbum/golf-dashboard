@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⛳ Caddie — Golf Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#080d0b;font-family:'DM Sans',sans-serif;color:#e8f0eb}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:#0a0f0d}
+::-webkit-scrollbar-thumb{background:#2d6a4f;border-radius:3px}
+
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:220px;background:#0f1a14;border-right:1px solid #1a2e20;display:flex;flex-direction:column;flex-shrink:0}
+#content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{padding:12px 22px;border-bottom:1px solid #1a2e20;background:#0f1a14;flex-shrink:0}
+#main{flex:1;overflow:auto;padding:18px}
+
+.logo{padding:18px 17px 14px;border-bottom:1px solid #1a2e20}
+.logo-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:#d4af37;letter-spacing:-.5px}
+.logo-sub{font-size:10px;color:#6b8f76;letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
+
+nav{padding:9px 7px;flex:1}
+.nav-btn{width:100%;display:flex;align-items:center;gap:8px;padding:9px 11px;background:transparent;border:none;border-left:2px solid transparent;border-radius:0 7px 7px 0;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;color:#6b8f76;margin-bottom:2px;transition:all .12s;text-align:left}
+.nav-btn:hover{background:rgba(212,175,55,.07)}
+.nav-btn.active{background:rgba(212,175,55,.13);border-left-color:#d4af37;color:#d4af37;font-weight:600}
+
+/* Caddie Pick sidebar card */
+.caddie-pick-box{margin:0 10px 10px;background:linear-gradient(135deg,rgba(212,175,55,.12),rgba(45,106,79,.15));border:1px solid rgba(212,175,55,.35);border-radius:10px;padding:12px 13px}
+.caddie-pick-label{font-size:10px;color:#d4af37;text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.caddie-pick-name{font-size:15px;font-weight:700;color:#f5d97a;line-height:1.2;margin-bottom:3px}
+.caddie-pick-sub{font-size:11px;color:#6b8f76;line-height:1.4}
+
+.tournament-box{padding:12px 14px;border-top:1px solid #1a2e20}
+.tourn-name{font-size:12px;font-weight:600;color:#e8f0eb;margin-bottom:3px}
+.tourn-status{font-size:11px;color:#6b8f76}
+.tourn-live{color:#86efac;font-weight:600}
+
+.sidebar-footer{padding:11px 12px;border-top:1px solid #1a2e20;display:flex;flex-direction:column;gap:7px}
+.btn-refresh{padding:10px;background:linear-gradient(135deg,#2d6a4f,#1a3c2e);border:1px solid #2d6a4f;border-radius:7px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn-refresh:disabled{opacity:.6;cursor:not-allowed}
+.btn-settings{padding:7px;background:transparent;border:1px solid #1a2e20;border-radius:6px;color:#6b8f76;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.last-refresh{font-size:10px;color:#6b8f76;text-align:center}
+.ai-note{font-size:12px;color:#f5d97a;margin-top:3px}
+
+/* stat cards */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:18px}
+.stat-card{background:#0f1a14;border:1px solid #1a2e20;border-radius:11px;padding:16px 18px;transition:transform .18s,box-shadow .18s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.4)}
+.stat-num{font-family:'DM Mono',monospace;font-size:28px;font-weight:700;line-height:1}
+.stat-label{font-size:13px;font-weight:500;margin-top:5px}
+.stat-sub{font-size:11px;color:#6b8f76;margin-top:2px}
+
+.panel{background:#0f1a14;border:1px solid #1a2e20;border-radius:11px;overflow:hidden}
+.panel-header{padding:12px 16px;border-bottom:1px solid #1a2e20;display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:14px}
+
+table{width:100%;border-collapse:collapse}
+th{padding:10px 12px;font-size:11px;color:#6b8f76;letter-spacing:.05em;text-transform:uppercase;font-family:'DM Mono',monospace;background:#0a1a10;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:#d4af37}
+td{padding:9px 12px;font-size:13px;border-bottom:1px solid #1a2e20}
+tr:hover td{background:rgba(45,106,79,.12)}
+
+.tier{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap;border:1px solid}
+.tier-Elite{background:#0d2218;border-color:#52b788;color:#a7f3d0}
+.tier-Contender{background:#0d1a2c;border-color:#3b82f6;color:#93c5fd}
+.tier-HotForm{background:#2a0f03;border-color:#f97316;color:#fdba74}
+.tier-Sleeper{background:#1e1600;border-color:#d4af37;color:#fde68a}
+.tier-Value{background:#120f28;border-color:#8b5cf6;color:#c4b5fd}
+.tier-LIVWatch{background:#280f1e;border-color:#ec4899;color:#f9a8d4}
+.tier-Specialist{background:#061a10;border-color:#34d399;color:#6ee7b7}
+
+.used-badge{display:inline-block;margin-left:5px;font-size:10px;background:#ef4444;color:#fff;padding:1px 5px;border-radius:4px;font-weight:600}
+.wd-badge{display:inline-block;margin-left:5px;font-size:10px;background:#7c2d12;color:#fca38a;padding:1px 5px;border-radius:4px;font-weight:600;border:1px solid #ef4444}
+.prob-bar{height:7px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;flex:1}
+.prob-fill{height:100%;background:linear-gradient(90deg,#2d6a4f,#d4af37);border-radius:4px;transition:width .7s ease}
+
+.search-inp{width:100%;padding:9px 13px;background:#0f1a14;border:1px solid #1a2e20;border-radius:7px;color:#e8f0eb;font-size:13px;margin-bottom:13px;font-family:'DM Sans',sans-serif}
+.search-inp:focus{outline:none;border-color:#d4af37}
+.filter-btn{padding:5px 12px;border-radius:6px;border:1px solid #1a2e20;background:transparent;color:#6b8f76;font-size:12px;font-family:'DM Mono',monospace;cursor:pointer}
+.filter-btn.active{border-color:#d4af37;background:rgba(212,175,55,.1);color:#d4af37}
+
+/* schedule */
+.sched-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.sched-card{background:#0f1a14;border:1px solid #1a2e20;border-radius:11px;padding:14px;position:relative;overflow:hidden;transition:transform .18s}
+.sched-card:hover{transform:translateY(-2px)}
+.sched-card.major{border-color:rgba(212,175,55,.4)}
+.sched-card.curr{border-color:rgba(82,183,136,.35)}
+.sched-tag{position:absolute;top:0;right:0;padding:3px 9px;font-size:9px;font-weight:700;letter-spacing:.06em}
+.sched-tag.major{background:rgba(212,175,55,.15);color:#d4af37}
+.sched-tag.curr{background:rgba(82,183,136,.15);color:#86efac}
+
+/* leaderboard */
+.lb-pos{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;text-align:center;width:36px}
+.lb-score{font-family:'DM Mono',monospace;font-size:14px;font-weight:700}
+.lb-thru{font-family:'DM Mono',monospace;font-size:11px;color:#6b8f76}
+.pos-gold{color:#d4af37}
+.pos-green{color:#86efac}
+.score-red{color:#f87171}
+.score-green{color:#86efac}
+.score-even{color:#e8f0eb}
+
+/* odds pills */
+.odds-row{display:flex;gap:6px;flex-wrap:wrap}
+.odds-pill{padding:3px 8px;border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;border:1px solid}
+.odds-fav{background:rgba(212,175,55,.1);border-color:rgba(212,175,55,.4);color:#f5d97a}
+.odds-mid{background:rgba(96,165,250,.08);border-color:rgba(96,165,250,.3);color:#93c5fd}
+.odds-long{background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.3);color:#c4b5fd}
+
+/* Caddie Pick crown row */
+.caddie-row td{background:rgba(212,175,55,.06)!important}
+.caddie-crown{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(90deg,rgba(212,175,55,.2),rgba(212,175,55,.05));border:1px solid rgba(212,175,55,.4);border-radius:5px;padding:1px 7px;font-size:10px;font-weight:700;color:#d4af37;letter-spacing:.04em}
+
+/* player panel */
+#player-panel{background:#0f1a14;border:1px solid #1a2e20;border-radius:11px;padding:16px;align-self:start;position:sticky;top:0;min-width:280px}
+.stat-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.stat-mini{background:rgba(255,255,255,.03);border-radius:7px;padding:7px 9px}
+.stat-mini-label{font-size:10px;color:#6b8f76}
+.stat-mini-val{font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:#d4af37;margin-top:1px}
+
+.sg-great{color:#86efac;font-weight:700}
+.sg-good{color:#fde68a}
+.sg-ok{color:#e8f0eb}
+.sg-bad{color:#f87171}
+.mono{font-family:'DM Mono',monospace}
+
+.overview-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:15px}
+.players-grid{display:grid;gap:15px}
+.players-grid.with-panel{grid-template-columns:1fr 280px}
+.players-grid.no-panel{grid-template-columns:1fr}
+.tier-legend{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.upcoming-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.btn-view-all{background:transparent;border:1px solid #1a2e20;color:#6b8f76;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:#111c14;border:1px solid #2d6a4f;border-radius:13px;padding:24px;width:440px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-title{font-family:'Playfair Display',serif;font-size:19px;color:#e8f0eb}
+.modal-close{background:none;border:none;color:#6b8f76;font-size:22px;cursor:pointer;line-height:1}
+.field-label{font-size:11px;color:#6b8f76;text-transform:uppercase;letter-spacing:.07em;font-family:'DM Mono',monospace;margin-bottom:5px;display:block}
+.field-inp{width:100%;padding:9px 11px;background:#080d0b;border:1px solid #1a2e20;border-radius:7px;color:#e8f0eb;font-size:13px;font-family:'DM Sans',sans-serif}
+.field-inp:focus{outline:none;border-color:#d4af37}
+.info-box{background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.2);border-radius:8px;padding:11px 13px;font-size:13px;color:#f5d97a;line-height:1.55;margin-bottom:16px}
+.btn-cancel{padding:8px 16px;background:transparent;border:1px solid #1a2e20;border-radius:7px;color:#6b8f76;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.btn-save{padding:8px 20px;background:linear-gradient(135deg,#2d6a4f,#1a3c2e);border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* loading skeleton */
+.skeleton{background:linear-gradient(90deg,#0f1a14 25%,#1a2e20 50%,#0f1a14 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:5px;height:14px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fadeUp .32s ease forwards}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{animation:spin 1s linear infinite;display:inline-block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.live-dot{width:7px;height:7px;background:#86efac;border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;margin-right:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="logo">
+      <div class="logo-title">⛳ CADDIE</div>
+      <div class="logo-sub">Golf Analytics</div>
+    </div>
+    <nav id="nav"></nav>
+
+    <!-- Caddie Pick box -->
+    <div class="caddie-pick-box" id="caddie-pick-box">
+      <div class="caddie-pick-label">⛳ Caddie Pick</div>
+      <div class="caddie-pick-name" id="caddie-pick-name">—</div>
+      <div class="caddie-pick-sub" id="caddie-pick-sub">Hit Refresh to generate</div>
+    </div>
+
+    <!-- Tournament status -->
+    <div class="tournament-box">
+      <div class="tourn-name" id="tourn-name">Loading tournament…</div>
+      <div class="tourn-status" id="tourn-status">—</div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="btn-refresh" id="btn-refresh">🔄 Refresh Data</button>
+      <button class="btn-refresh" id="btn-send-email" style="background:linear-gradient(135deg,#1a3c5e,#0d2238);border-color:#2563eb">📧 Send Report</button>
+      <button class="btn-settings" id="btn-settings">⚙️ API Settings <span id="key-check"></span></button>
+      <div class="last-refresh" id="last-refresh"></div>
+    </div>
+  </aside>
+
+  <div id="content">
+    <div id="topbar">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h1 style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700" id="page-title">Overview</h1>
+          <div class="ai-note" id="ai-note" style="display:none"></div>
+        </div>
+        <div id="topbar-filters"></div>
+      </div>
+    </div>
+    <div id="main"></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="settings-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ API Settings</div>
+      <button class="modal-close" id="settings-close">×</button>
+    </div>
+    <div class="info-box">Your keys are saved only in <strong>your browser's local storage</strong> — they never leave your device except to call Anthropic directly.</div>
+    <div style="margin-bottom:14px">
+      <label class="field-label">Anthropic API Key</label>
+      <input class="field-inp" id="api-key-inp" type="password" placeholder="sk-ant-api03-…"/>
+      <div style="font-size:11px;color:#6b8f76;margin-top:4px">Get a key at <strong style="color:#f5d97a">console.anthropic.com</strong> → API Keys</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="field-label">Your Email (for pre-tournament reports)</label>
+      <input class="field-inp" id="email-inp" type="email" placeholder="you@email.com"/>
+      <div style="font-size:11px;color:#6b8f76;margin-top:4px">Hit <strong style="color:#d4af37">Send Report</strong> any time to email yourself the current rankings. Also auto-sends the morning before each tournament.</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn-cancel" id="settings-cancel">Cancel</button>
+      <button class="btn-save" id="settings-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const PLAYERS = [
+  {id:1, f:"🇺🇸",name:"Scottie Scheffler",  tour:"PGA",owgr:1, sg:2.41,app:1.05,ott:.52,atg:.61,putt:.48,drv:318,gir:72.1,avg:68.9,fit:9, prob:42,odds:"+480", sb:"W",  sa:8.2, age:27,
+   books:{dk:"+480",fd:"+500",mgm:"+450",bet365:"+475",cons:"+480"}},
+  {id:2, f:"🇬🇧",name:"Rory McIlroy",       tour:"PGA",owgr:2, sg:1.82,app:.94, ott:.61,atg:.31,putt:.27,drv:326,gir:71.8,avg:69.4,fit:8, prob:26,odds:"+600", sb:1,    sa:7.1, age:35,
+   books:{dk:"+600",fd:"+650",mgm:"+550",bet365:"+600",cons:"+600"}},
+  {id:3, f:"🇺🇸",name:"Xander Schauffele",  tour:"PGA",owgr:3, sg:1.68,app:.83, ott:.48,atg:.24,putt:.37,drv:308,gir:70.2,avg:69.8,fit:7, prob:21,odds:"+1400",sb:5,    sa:9.4, age:30,
+   books:{dk:"+1400",fd:"+1400",mgm:"+1300",bet365:"+1400",cons:"+1400"}},
+  {id:4, f:"🇺🇸",name:"Collin Morikawa",    tour:"PGA",owgr:4, sg:1.71,app:1.05,ott:.21,atg:.19,putt:.27,drv:298,gir:73.8,avg:69.6,fit:8, prob:28,odds:"+1800",sb:4,    sa:14.2,age:27,
+   books:{dk:"+1800",fd:"+1800",mgm:"+1600",bet365:"+1800",cons:"+1800"}},
+  {id:5, f:"🇳🇴",name:"Viktor Hovland",     tour:"PGA",owgr:5, sg:1.52,app:.77, ott:.44,atg:.18,putt:.31,drv:311,gir:70.9,avg:70.1,fit:7, prob:21,odds:"+2000",sb:6,    sa:16.8,age:27,
+   books:{dk:"+2000",fd:"+2200",mgm:"+1800",bet365:"+2000",cons:"+2000"}},
+  {id:6, f:"🇸🇪",name:"Ludvig Åberg",       tour:"PGA",owgr:6, sg:1.44,app:.68, ott:.39,atg:.26,putt:.26,drv:316,gir:71.4,avg:70.2,fit:8, prob:25,odds:"+2200",sb:8,    sa:8.0, age:24,
+   books:{dk:"+2200",fd:"+2200",mgm:"+2000",bet365:"+2200",cons:"+2200"}},
+  {id:7, f:"🇬🇧",name:"Tommy Fleetwood",    tour:"PGA",owgr:7, sg:1.38,app:.71, ott:.28,atg:.21,putt:.29,drv:302,gir:72.4,avg:70.0,fit:7, prob:22,odds:"+2500",sb:9,    sa:12.4,age:33,
+   books:{dk:"+2500",fd:"+2500",mgm:"+2200",bet365:"+2500",cons:"+2500"}},
+  {id:8, f:"🇪🇸",name:"Jon Rahm",           tour:"LIV",owgr:8, sg:1.48,app:.72, ott:.41,atg:.22,putt:.30,drv:313,gir:71.8,avg:70.2,fit:7, prob:20,odds:"+2800",sb:4,    sa:18.0,age:30,
+   books:{dk:"+2800",fd:"+3000",mgm:"+2500",bet365:"+2800",cons:"+2800"}},
+  {id:9, f:"🇰🇷",name:"Si Woo Kim",         tour:"PGA",owgr:18,sg:1.09,app:.88, ott:.31,atg:.12,putt:-.03,drv:304,gir:69.8,avg:70.8,fit:8,prob:24,odds:"+3000",sb:"W",  sa:6.8, age:29,
+   books:{dk:"+3000",fd:"+3000",mgm:"+2800",bet365:"+3200",cons:"+3000"}},
+  {id:10,f:"🇺🇸",name:"Akshay Bhatia",      tour:"PGA",owgr:14,sg:1.22,app:.62, ott:.48,atg:.18,putt:.25,drv:319,gir:69.8,avg:70.1,fit:6, prob:14,odds:"+3000",sb:18,   sa:24.0,age:22,
+   books:{dk:"+3000",fd:"+3200",mgm:"+2800",bet365:"+3000",cons:"+3000"}},
+  {id:11,f:"🇺🇸",name:"Patrick Cantlay",    tour:"PGA",owgr:16,sg:1.08,app:.61, ott:.18,atg:.23,putt:.20,drv:298,gir:71.2,avg:70.5,fit:7, prob:18,odds:"+3500",sb:8,    sa:17.2,age:32,
+   books:{dk:"+3500",fd:"+3500",mgm:"+3200",bet365:"+3500",cons:"+3500"}},
+  {id:12,f:"🇦🇺",name:"Cam Smith",          tour:"LIV",owgr:15,sg:1.18,app:.54, ott:.24,atg:.26,putt:.30,drv:299,gir:71.2,avg:70.6,fit:7, prob:17,odds:"+4000",sb:"W",  sa:12.0,age:31,
+   books:{dk:"+4000",fd:"+4000",mgm:"+3500",bet365:"+4000",cons:"+4000"}},
+  {id:13,f:"🇺🇸",name:"Justin Thomas",      tour:"PGA",owgr:21,sg:.98, app:.51, ott:.24,atg:.18,putt:.24,drv:305,gir:69.9,avg:70.9,fit:7, prob:14,odds:"+5500",sb:3,    sa:18.1,age:31,
+   books:{dk:"+5500",fd:"+5500",mgm:"+5000",bet365:"+5500",cons:"+5500"}},
+  {id:14,f:"🇬🇧",name:"Matt Fitzpatrick",   tour:"PGA",owgr:24,sg:.88, app:.72, ott:.09,atg:.18,putt:.17,drv:286,gir:70.1,avg:71.1,fit:7, prob:16,odds:"+4500",sb:6,    sa:20.4,age:29,
+   books:{dk:"+4500",fd:"+4500",mgm:"+4000",bet365:"+4500",cons:"+4500"}},
+  {id:15,f:"🇺🇸",name:"Ryan Gerard",        tour:"PGA",owgr:58,sg:.62, app:.38, ott:.24,atg:.18,putt:.11,drv:304,gir:69.8,avg:71.8,fit:6, prob:18,odds:"+7000",sb:28,   sa:42.0,age:26,
+   books:{dk:"+7000",fd:"+7500",mgm:"+6500",bet365:"+7000",cons:"+7000"}},
+  {id:16,f:"🇦🇹",name:"Sepp Straka",        tour:"PGA",owgr:39,sg:.78, app:.48, ott:.19,atg:.19,putt:.16,drv:296,gir:70.4,avg:71.4,fit:6, prob:15,odds:"+5500",sb:12,   sa:26.0,age:31,
+   books:{dk:"+5500",fd:"+5500",mgm:"+5000",bet365:"+5500",cons:"+5500"}},
+  {id:17,f:"🇺🇸",name:"Bryson DeChambeau",  tour:"LIV",owgr:17,sg:.96, app:.38, ott:.64,atg:.14,putt:.20,drv:338,gir:67.4,avg:70.9,fit:6, prob:13,odds:"+5000",sb:4,    sa:28.0,age:31,
+   books:{dk:"+5000",fd:"+5000",mgm:"+4500",bet365:"+5000",cons:"+5000"}},
+  {id:18,f:"🇺🇸",name:"Brooks Koepka",      tour:"LIV",owgr:19,sg:.89, app:.44, ott:.28,atg:.16,putt:.21,drv:311,gir:68.2,avg:71.0,fit:6, prob:13,odds:"+5000",sb:11,   sa:28.0,age:34,
+   books:{dk:"+5000",fd:"+5200",mgm:"+4500",bet365:"+5000",cons:"+5000"}},
+  {id:19,f:"🇺🇸",name:"Cameron Young",      tour:"PGA",owgr:26,sg:.86, app:.42, ott:.49,atg:.14,putt:.15,drv:323,gir:68.9,avg:71.1,fit:7, prob:12,odds:"+6500",sb:6,    sa:22.0,age:26,
+   books:{dk:"+6500",fd:"+6500",mgm:"+6000",bet365:"+6500",cons:"+6500"}},
+  {id:20,f:"🇮🇪",name:"Shane Lowry",        tour:"PGA",owgr:23,sg:.91, app:.56, ott:.14,atg:.24,putt:.22,drv:294,gir:69.4,avg:71.0,fit:6, prob:15,odds:"+5000",sb:8,    sa:16.8,age:36,
+   books:{dk:"+5000",fd:"+5000",mgm:"+4500",bet365:"+5000",cons:"+5000"}},
+  {id:21,f:"🇯🇵",name:"Hideki Matsuyama",   tour:"PGA",owgr:9, sg:1.29,app:.68, ott:.22,atg:.18,putt:.31,drv:294,gir:68.9,avg:70.4,fit:6, prob:14,odds:"+4500",sb:11,   sa:18.6,age:32,
+   books:{dk:"+4500",fd:"+4500",mgm:"+4000",bet365:"+4500",cons:"+4500"}},
+  {id:22,f:"🇺🇸",name:"Jordan Spieth",      tour:"PGA",owgr:10,sg:1.14,app:.48, ott:.28,atg:.24,putt:.33,drv:296,gir:68.4,avg:70.6,fit:6, prob:14,odds:"+5000",sb:7,    sa:19.4,age:31,
+   books:{dk:"+5000",fd:"+5000",mgm:"+4500",bet365:"+5000",cons:"+5000"}},
+  {id:23,f:"🇺🇸",name:"Dustin Johnson",     tour:"LIV",owgr:20,sg:.84, app:.28, ott:.48,atg:.14,putt:.22,drv:324,gir:67.8,avg:71.2,fit:6, prob:11,odds:"+7500",sb:6,    sa:24.0,age:40,
+   books:{dk:"+7500",fd:"+7500",mgm:"+7000",bet365:"+7500",cons:"+7500"}},
+  {id:24,f:"🇨🇱",name:"Joaquin Niemann",    tour:"LIV",owgr:26,sg:.84, app:.38, ott:.32,atg:.16,putt:.17,drv:318,gir:69.4,avg:71.2,fit:6, prob:11,odds:"+7000",sb:12,   sa:28.0,age:25,
+   books:{dk:"+7000",fd:"+7000",mgm:"+6500",bet365:"+7000",cons:"+7000"}},
+  {id:25,f:"🇦🇺",name:"Jason Day",          tour:"PGA",owgr:28,sg:.82, app:.46, ott:.18,atg:.22,putt:.18,drv:291,gir:70.2,avg:71.3,fit:6, prob:13,odds:"+6000",sb:2,    sa:22.8,age:37,
+   books:{dk:"+6000",fd:"+6000",mgm:"+5500",bet365:"+6000",cons:"+6000"}},
+];
+
+const SCHEDULE = [
+  {w:1, name:"The Players Championship",     course:"TPC Sawgrass",          dates:"Mar 12–15",major:false,curr:false,done:true},
+  {w:2, name:"Valspar Championship",          course:"Innisbrook (Copperhead)",dates:"Mar 19–22",major:false,curr:true},
+  {w:3, name:"Texas Children's Houston Open", course:"Memorial Park GC",      dates:"Mar 26–29",major:false},
+  {w:4, name:"Valero Texas Open",             course:"TPC San Antonio",       dates:"Apr 2–5",  major:false},
+  {w:5, name:"Masters Tournament",            course:"Augusta National",      dates:"Apr 9–13", major:true},
+  {w:6, name:"RBC Heritage",                  course:"Harbour Town GL",       dates:"Apr 17–20",major:false},
+  {w:7, name:"Zurich Classic",                course:"TPC Louisiana",         dates:"Apr 24–27",major:false},
+  {w:8, name:"Cadillac Championship",         course:"TBD",                   dates:"Apr 30–May 3",major:false},
+  {w:9, name:"Truist Championship",           course:"TBD",                   dates:"May 7–10", major:false},
+  {w:10,name:"PGA Championship",              course:"Quail Hollow Club",     dates:"May 14–17",major:true},
+  {w:11,name:"Charles Schwab Challenge",      course:"Colonial CC",           dates:"May 21–24",major:false},
+  {w:12,name:"Memorial Tournament",           course:"Muirfield Village",     dates:"May 28–31",major:false},
+  {w:13,name:"US Open",                       course:"Shinnecock Hills",      dates:"Jun 11–14",major:true},
+  {w:14,name:"Travelers Championship",        course:"TPC River Highlands",   dates:"Jun 18–21",major:false},
+  {w:15,name:"The Open Championship",         course:"Royal Portrush",        dates:"Jul 9–12", major:true},
+];
+
+// ── PAST RESULTS (seeded with Week 1 actual results) ─────────────────────
+// Structure: { week, tournament, caddiePick, caddieProb, actualTop10, winner, actualFinishes }
+// actualFinishes: [{name, finish, inTop10}] — the real leaderboard
+const SEEDED_RESULTS = [
+  {
+    week: 1,
+    tournament: "The Players Championship",
+    course: "TPC Sawgrass",
+    caddiePick: "Scottie Scheffler",
+    caddieProb: 42,
+    caddieRankings: [
+      {rank:1,name:"Scottie Scheffler",prob:42},
+      {rank:2,name:"Si Woo Kim",prob:28},
+      {rank:3,name:"Ludvig Åberg",prob:25},
+      {rank:4,name:"Tommy Fleetwood",prob:22},
+      {rank:5,name:"Patrick Cantlay",prob:18},
+    ],
+    winner: "Rory McIlroy",
+    actualTop10: ["Rory McIlroy","Scottie Scheffler","Shane Lowry","Tommy Fleetwood","Sepp Straka","Si Woo Kim","Keegan Bradley","Russell Henley","Matt Fitzpatrick","Viktor Hovland"],
+    notes: "McIlroy won in playoff. Scheffler rallied from T40 after R1 to T2. Si Woo Kim (ranked #2) made top 10. Tommy Fleetwood (ranked #4) top 10.",
+  },
+];
+
+const DEFAULT_RANKER = [
+  {rank:1, name:"Scottie Scheffler",tier:"Elite",    prob:42,odds:"+480", note:"Back-to-back champion; dominant in every stat"},
+  {rank:2, name:"Si Woo Kim",       tier:"Specialist",prob:28,odds:"+3000",note:"2017 champion; field-best approach stats"},
+  {rank:3, name:"Ludvig Åberg",     tier:"Hot Form", prob:25,odds:"+2200",note:"T3 Bay Hill; improving every start"},
+  {rank:4, name:"Tommy Fleetwood",  tier:"Contender",prob:22,odds:"+2500",note:"Precision over power; loves demanding courses"},
+  {rank:5, name:"Viktor Hovland",   tier:"Contender",prob:21,odds:"+2000",note:"Ball-striking machine; strong Sawgrass trend"},
+  {rank:6, name:"Xander Schauffele",tier:"Elite",    prob:21,odds:"+1400",note:"Major champion consistency; rock solid"},
+  {rank:7, name:"Jordan Spieth",    tier:"Contender",prob:16,odds:"+5000",note:"Elite putter; strong Sawgrass history"},
+  {rank:8, name:"Ryan Gerard",      tier:"Sleeper",  prob:18,odds:"+7000",note:"Top-8 SG total; flying under radar"},
+  {rank:9, name:"Patrick Cantlay",  tier:"Contender",prob:18,odds:"+3500",note:"Precision player; strong Sawgrass fit"},
+  {rank:10,name:"Hideki Matsuyama", tier:"Contender",prob:14,odds:"+4500",note:"Strong iron play; Sawgrass contender"},
+  {rank:11,name:"Collin Morikawa",  tier:"Elite",    prob:0, odds:"+1800",note:"❌ WD — withdrew after one hole"},
+  {rank:12,name:"Matt Fitzpatrick", tier:"Contender",prob:16,odds:"+4500",note:"Elite iron play; accuracy over distance"},
+  {rank:13,name:"Sepp Straka",      tier:"Value",    prob:15,odds:"+5500",note:"Undervalued; elite ball-striking"},
+  {rank:14,name:"Shane Lowry",      tier:"Contender",prob:15,odds:"+5000",note:"Experienced links-style grinder"},
+  {rank:15,name:"Akshay Bhatia",    tier:"Hot Form", prob:14,odds:"+3000",note:"Won Arnold Palmer; hottest streak on Tour"},
+];
+
+const TIERS = {
+  "Elite":"tier-Elite","Contender":"tier-Contender","Hot Form":"tier-HotForm",
+  "Sleeper":"tier-Sleeper","Value":"tier-Value","LIV Watch":"tier-LIVWatch","Specialist":"tier-Specialist",
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let state = {
+  view:"overview", ranker:DEFAULT_RANKER, aiNote:"", lastRefresh:"",
+  apiKey:"", email:"", sortK:"sg", sortD:"desc", tourF:"all", search:"", selPlayer:null,
+  leaderboard:[], lbEvent:"", lbStatus:"", lbLoaded:false, field:[], conditions:"", xInsights:"", currentRound:0,
+  pastResults:[], lastEvent:"",
+};
+
+// ── STORAGE ───────────────────────────────────────────────────────────────
+function sGet(k){try{const v=localStorage.getItem("caddie_"+k);return v?JSON.parse(v):null;}catch{return null;}}
+function sSet(k,v){try{localStorage.setItem("caddie_"+k,JSON.stringify(v));}catch{}}
+// Players who are LIV-only and won't appear in PGA events
+const LIV_ONLY = ["cam smith","jon rahm","brooks koepka","dustin johnson","bryson dechambeau","joaquin niemann","phil mickelson","patrick reed","harold varner"];
+
+function loadState(){
+  const r=sGet("ranker");
+  if(r){
+    const hasLIVOnly=r.some(p=>LIV_ONLY.includes(p.name.toLowerCase()));
+    if(!hasLIVOnly) state.ranker=r;
+    else { sSet("ranker",null); }
+  }
+  const n=sGet("note"); if(n) state.aiNote=n;
+  const lr=sGet("lr"); if(lr) state.lastRefresh=lr;
+  const k=sGet("apiKey"); if(k) state.apiKey=k;
+  const em=sGet("email"); if(em) state.email=em;
+  const cond=sGet("conditions"); if(cond) state.conditions=cond;
+  const xi=sGet("xInsights"); if(xi) state.xInsights=xi;
+  const pr=sGet("pastResults"); state.pastResults=pr||[];
+  // Seed with hardcoded results if not yet in storage
+  SEEDED_RESULTS.forEach(seed=>{
+    if(!state.pastResults.find(r=>r.week===seed.week)) state.pastResults.push(seed);
+  });
+  const le=sGet("lastEvent"); if(le) state.lastEvent=le;
+
+  // If the tournament has changed since last visit, wipe the ranker cache
+  // so we don't show stale Players Championship rankings for Valspar
+  const currEvent=SCHEDULE.find(s=>s.curr);
+  if(currEvent&&state.lastEvent&&state.lastEvent!==currEvent.name){
+    sSet("ranker",null);
+    sSet("conditions",null);
+    sSet("xInsights",null);
+    state.ranker=DEFAULT_RANKER;
+    state.conditions="";
+    state.xInsights="";
+  }
+  if(currEvent) state.lastEvent=currEvent.name;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function h(str){return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function tierBadge(tier){const cls=TIERS[tier]||"tier-Value";return `<span class="tier ${cls}">${h(tier)}</span>`;}
+function sgClass(v){return v>0.8?"sg-great mono":v>0.3?"sg-good mono":v>0?"sg-ok mono":"sg-bad mono";}
+function oddsClass(o){const n=parseInt((o||"").replace(/[^-\d]/g,""));return n<1000?"odds-fav":n<5000?"odds-mid":"odds-long";}
+function scoreColor(s){if(!s||s==="E"||s==="0")return "score-even";if(s.startsWith("-"))return "score-red";return "score-green";}
+function fmtScore(s){if(!s||s==="E")return "E";const n=parseInt(s);if(isNaN(n))return h(s);return n<0?h(s):n===0?"E":"+"+s;}
+
+// ── LIVE ESPN DATA ─────────────────────────────────────────────────────────
+async function fetchESPN(){
+  try{
+    const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard");
+    const data=await res.json();
+    const events=data.events||[];
+    if(!events.length) return null;
+    const event=events[0];
+    const comp=event.competitions?.[0];
+    if(!comp) return null;
+    const statusState=comp.status?.type?.state||"";
+    const statusDetail=comp.status?.type?.shortDetail||comp.status?.type?.description||"";
+    const inProgress=statusState==="in";
+    const competitors=(comp.competitors||[]).map(c=>{
+      const statusName=c.status?.type?.name||"";
+      const statusDetail2=c.status?.type?.shortDetail||"";
+      const isWD=statusName==="STATUS_WITHDRAWN"||statusDetail2.toLowerCase().includes("wd")||statusDetail2.toLowerCase().includes("withdrawn");
+      const isCut=statusName==="STATUS_MISSED_CUT"||statusDetail2.toLowerCase().includes("cut");
+      const score=c.score?.displayValue||c.linescores?.find(l=>l)?.displayValue||"E";
+      const pos=c.status?.position?.displayName||c.status?.displayValue||"—";
+      const thru=c.status?.period||c.status?.type?.description||"";
+      const today=c.linescores?.[c.linescores.length-1]?.displayValue||"";
+      return {
+        name:c.athlete?.displayName||"",
+        pos, score, thru, today, isWD, isCut,
+        posNum:parseInt((pos||"999").replace("T",""))||999,
+      };
+    });
+    competitors.sort((a,b)=>{
+      if(a.isWD&&!b.isWD) return 1; if(b.isWD&&!a.isWD) return -1;
+      if(a.isCut&&!b.isCut) return 1; if(b.isCut&&!a.isCut) return -1;
+      return a.posNum-b.posNum;
+    });
+    return {eventName:event.name||"Current Event",status:statusDetail,inProgress,competitors,statusState};
+  }catch(e){return null;}
+}
+
+// ── LIVE T10 PROBABILITY ──────────────────────────────────────────────────
+// Converts current leaderboard position + round context into realistic T10 probability.
+// Pre-tournament: uses SG-based model. During/after: position-weighted formula.
+function calcLiveT10Prob(espnPlayer, roundNum){
+  if(!espnPlayer) return null;
+  if(espnPlayer.isWD) return 0;
+  if(espnPlayer.isCut) return 0;
+
+  const pos = espnPlayer.posNum || 999;
+  const scoreStr = espnPlayer.score || "E";
+  const scoreNum = scoreStr==="E"||scoreStr==="0" ? 0 : parseInt(scoreStr) || 0;
+
+  // Estimate round from thru/status
+  let round = roundNum || 0;
+  const thru = espnPlayer.thru || "";
+  if(thru.includes("F") || thru==="18") round = round || 4;
+
+  if(round===0){
+    // Pre-tournament — position-only isn't meaningful, return null (use SG model)
+    return null;
+  }
+
+  // Tighten probabilities as rounds progress
+  // Base: probability that someone at position X after R rounds finishes top 10
+  const posProb = (p, r) => {
+    if(p<=3){
+      if(r===1) return 55;
+      if(r===2) return 65;
+      if(r===3) return 78;
+      return 90;
+    } else if(p<=5){
+      if(r===1) return 42;
+      if(r===2) return 55;
+      if(r===3) return 68;
+      return 82;
+    } else if(p<=10){
+      if(r===1) return 32;
+      if(r===2) return 42;
+      if(r===3) return 55;
+      return 72;
+    } else if(p<=15){
+      if(r===1) return 22;
+      if(r===2) return 28;
+      if(r===3) return 35;
+      return 30; // just outside, can still make run
+    } else if(p<=20){
+      if(r===1) return 16;
+      if(r===2) return 18;
+      if(r===3) return 18;
+      return 12;
+    } else if(p<=30){
+      if(r===1) return 12;
+      if(r===2) return 10;
+      if(r===3) return 8;
+      return 4;
+    } else if(p<=50){
+      if(r===1) return 7;
+      if(r===2) return 5;
+      if(r===3) return 3;
+      return 1;
+    }
+    return 2;
+  };
+
+  return posProb(pos, round);
+}
+
+// Detect current round from ESPN status string
+function detectRound(statusStr){
+  if(!statusStr) return 0;
+  const s = statusStr.toLowerCase();
+  if(s.includes("round 4")||s.includes("final")) return 4;
+  if(s.includes("round 3")) return 3;
+  if(s.includes("round 2")) return 2;
+  if(s.includes("round 1")) return 1;
+  return 0;
+}
+
+async function loadLeaderboard(){
+  const data=await fetchESPN();
+  if(data){
+    state.leaderboard=data.competitors;
+    state.lbEvent=data.eventName;
+    state.lbStatus=data.status;
+    state.lbInProgress=data.inProgress;
+    state.lbLoaded=true;
+    state.field=data.competitors.map(c=>c.name.toLowerCase().trim());
+    const round=detectRound(data.status);
+    state.currentRound=round;
+
+    // ── LIVE T10 PROB UPDATE ──
+    // If tournament is in progress, recalculate every player's T10 prob
+    // from their actual leaderboard position — no waiting for AI
+    if(round>0){
+      state.ranker=state.ranker.map(r=>{
+        const espn=data.competitors.find(c=>
+          c.name.toLowerCase()===r.name.toLowerCase()||
+          c.name.toLowerCase().includes(r.name.split(" ").pop().toLowerCase())
+        );
+        if(!espn) return r;
+        if(espn.isWD) return {...r,prob:0,note:"❌ WD — withdrew"};
+        if(espn.isCut) return {...r,prob:0,note:`MC · ${fmtScore(espn.score)}`};
+        const liveProb=calcLiveT10Prob(espn,round);
+        if(liveProb===null) return r;
+        return {...r,prob:liveProb,
+          note:`Pos ${espn.pos} · ${fmtScore(espn.score)} · R${round}`
+        };
+      });
+      // Re-sort by updated live prob and re-rank
+      state.ranker.sort((a,b)=>(b.prob||0)-(a.prob||0));
+      state.ranker=state.ranker.map((r,i)=>({...r,rank:i+1}));
+      sSet("ranker",state.ranker);
+    }
+
+    // Filter to confirmed field
+    if(state.field.length>5){
+      const inField=r=>state.field.some(f=>
+        f===r.name.toLowerCase().trim()||
+        f.includes(r.name.split(" ").pop().toLowerCase())
+      );
+      state.ranker=state.ranker.filter(inField);
+      if(state.ranker.length<5) state.ranker=DEFAULT_RANKER.filter(inField);
+    }
+
+    document.getElementById("tourn-name").textContent=data.eventName;
+    document.getElementById("tourn-status").innerHTML=data.inProgress
+      ?`<span class="live-dot"></span><span class="tourn-live">LIVE · ${h(data.status)}</span>`
+      :`<span style="color:#6b8f76">${h(data.status)}</span>`;
+    // Track which event was last seen so we can reset stale ranker next visit
+    if(data.eventName){ state.lastEvent=data.eventName; sSet("lastEvent",data.eventName); }
+    updateCaddiePick();
+    checkPreTournamentEmail();
+  } else {
+    document.getElementById("tourn-name").textContent="The Players Championship";
+    document.getElementById("tourn-status").innerHTML=`<span style="color:#6b8f76">TPC Sawgrass</span>`;
+  }
+}
+
+function updateCaddiePick(){
+  const top=state.ranker.find(p=>(p.prob||0)>0&&!p.note?.includes("❌ WD")&&!p.note?.includes("⚠️ USED"));
+  if(top){
+    document.getElementById("caddie-pick-name").textContent=top.name;
+    document.getElementById("caddie-pick-sub").textContent=`${top.prob}% top-10 · ${top.odds} to win`;
+  }
+}
+
+function buildLiveSummary(){
+  if(!state.leaderboard.length) return "Live data unavailable.";
+  const wds=state.leaderboard.filter(p=>p.isWD).map(p=>p.name);
+  const cuts=state.leaderboard.filter(p=>p.isCut).map(p=>p.name);
+  const leaders=state.leaderboard.filter(p=>!p.isWD&&!p.isCut).slice(0,15);
+  let s=`EVENT: ${state.lbEvent}\nSTATUS: ${state.lbStatus}\n\n`;
+  if(wds.length) s+=`WITHDRAWALS (set prob=0, note ❌ WD): ${wds.join(", ")}\n\n`;
+  if(cuts.length) s+=`MISSED CUT (exclude or low prob): ${cuts.join(", ")}\n\n`;
+  if(leaders.length){
+    s+=`CURRENT LEADERBOARD:\n`;
+    leaders.forEach(p=>{ s+=`  ${p.pos} ${p.name} ${p.score} (thru ${p.thru})\n`; });
+  }
+  return s;
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function render(){
+  renderSidebar();
+  renderTopbar();
+  const m=document.getElementById("main");
+  if(state.view==="overview")    renderOverview(m);
+  else if(state.view==="ranker")      renderRanker(m);
+  else if(state.view==="players")     renderPlayers(m);
+  else if(state.view==="leaderboard") renderLeaderboard(m);
+  else if(state.view==="history")     renderHistory(m);
+  else if(state.view==="schedule")    renderSchedule(m);
+  updateCaddiePick();
+}
+
+function renderSidebar(){
+  const navs=[
+    {id:"overview",    icon:"⊞",label:"Overview"},
+    {id:"ranker",      icon:"🏆",label:"Ranker"},
+    {id:"players",     icon:"👥",label:"Players"},
+    {id:"leaderboard", icon:"📊",label:"Leaderboard"},
+    {id:"history",     icon:"📈",label:"Past Performance"},
+    {id:"schedule",    icon:"📅",label:"Schedule"},
+  ];
+  const nav=document.getElementById("nav");
+  nav.innerHTML="";
+  navs.forEach(n=>{
+    const btn=document.createElement("button");
+    btn.className="nav-btn"+(state.view===n.id?" active":"");
+    btn.innerHTML=`<span style="font-size:13px">${n.icon}</span>${n.label}`;
+    btn.onclick=()=>{ state.view=n.id; state.selPlayer=null; render(); if(n.id==="leaderboard") loadLeaderboard().then(()=>renderLeaderboard(document.getElementById("main"))); };
+    nav.appendChild(btn);
+  });
+  document.getElementById("key-check").textContent=state.apiKey?"✓":"";
+  document.getElementById("last-refresh").textContent=state.lastRefresh||"";
+  const aiEl=document.getElementById("ai-note");
+  if(state.aiNote){aiEl.style.display="block";aiEl.textContent="⚡ "+state.aiNote;}
+  else aiEl.style.display="none";
+}
+
+const viewTitles={overview:"Overview",ranker:"Ranker",players:"Players",leaderboard:"Live Leaderboard",history:"Past Performance",schedule:"Schedule"};
+function renderTopbar(){
+  document.getElementById("page-title").textContent=viewTitles[state.view]||"";
+  const fil=document.getElementById("topbar-filters");
+  if(state.view==="players"){
+    fil.innerHTML=["All","PGA","LIV"].map(t=>{
+      const v=t==="All"?"all":t;
+      return `<button class="filter-btn${state.tourF===v?" active":""}" data-f="${v}">${t}</button>`;
+    }).join("");
+    fil.querySelectorAll(".filter-btn").forEach(b=>{b.onclick=()=>{state.tourF=b.dataset.f;render();};});
+  } else {fil.innerHTML="";}
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────────────────────
+function renderOverview(container){
+  const top=state.ranker.find(p=>(p.prob||0)>0&&!p.note?.includes("❌ WD"));
+  const top3=state.ranker.filter(p=>(p.prob||0)>0&&!p.note?.includes("❌ WD")).slice(0,3);
+
+  let html=``;
+
+  // Caddie Pick hero card
+  if(top){
+    html+=`<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(45,106,79,.12));border:1px solid rgba(212,175,55,.35);border-radius:14px;padding:20px 24px;margin-bottom:18px;display:flex;align-items:center;gap:20px">
+      <div style="font-size:40px">⛳</div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:#d4af37;text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:4px">⛳ Caddie Pick — ${h(state.lbEvent||"The Players Championship")}</div>
+        <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#f5d97a;margin-bottom:4px">${h(top.name)}</div>
+        <div style="font-size:13px;color:#6b8f76">${h(top.note||"")}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'DM Mono',monospace;font-size:32px;font-weight:700;color:#d4af37;line-height:1">${top.prob}%</div>
+        <div style="font-size:11px;color:#6b8f76;margin-top:3px">top-10 probability</div>
+        <div style="font-family:'DM Mono',monospace;font-size:15px;color:#86efac;margin-top:5px;font-weight:600">${h(top.odds)}</div>
+        <div style="font-size:10px;color:#6b8f76">consensus odds</div>
+      </div>
+    </div>`;
+  }
+
+  // Course conditions + expert picks card
+  if(state.conditions||state.xInsights){
+    html+=`<div style="background:#0f1a14;border:1px solid #1a2e20;border-radius:11px;padding:15px 18px;margin-bottom:16px;display:grid;grid-template-columns:${state.xInsights?"1fr 1fr":"1fr"};gap:16px">`;
+    if(state.conditions){
+      html+=`<div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="font-size:20px;flex-shrink:0">🌿</div>
+        <div>
+          <div style="font-size:10px;color:#52b788;text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:4px">Course Conditions</div>
+          <div style="font-size:12px;color:#c8ddd1;line-height:1.6">${h(state.conditions)}</div>
+        </div>
+      </div>`;
+    }
+    if(state.xInsights){
+      html+=`<div style="display:flex;gap:12px;align-items:flex-start;border-left:1px solid #1a2e20;padding-left:16px">
+        <div style="font-size:20px;flex-shrink:0">🐦</div>
+        <div>
+          <div style="font-size:10px;color:#60a5fa;text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:4px">Klos & Mayo Picks</div>
+          <div style="font-size:12px;color:#c8ddd1;line-height:1.6">${h(state.xInsights)}</div>
+        </div>
+      </div>`;
+    }
+    html+=`<div style="grid-column:1/-1;font-size:10px;color:#6b8f76;margin-top:4px">Sources scanned from web · updated ${h(state.lastRefresh||"—")}</div></div>`;
+  } else {
+    html+=`<div style="background:#0f1a14;border:1px dashed #1a2e20;border-radius:11px;padding:14px 18px;margin-bottom:16px;display:flex;gap:14px;align-items:center">
+      <div style="font-size:20px">🌿</div>
+      <div style="font-size:13px;color:#6b8f76">Hit <strong style="color:#d4af37">Refresh Data</strong> to scan the web for course conditions, Ron Klos and Pat Mayo's picks, and live scores — then update rankings automatically.</div>
+    </div>`;
+  }
+
+  html+=`<div class="overview-grid">`;
+
+  // Ranker preview
+  html+=`<div class="panel">
+    <div class="panel-header">Top Picks This Week
+      <button class="btn-view-all" id="btn-view-ranker">Full Ranker →</button>
+    </div>`;
+  state.ranker.slice(0,8).forEach((p,i)=>{
+    const isWD=p.note?.includes("❌ WD")||p.prob===0;
+    const rankColor=i===0?"#d4af37":i===1?"#94a3b8":i===2?"#cd7f32":"#6b8f76";
+    const pl=PLAYERS.find(x=>x.name===p.name);
+    html+=`<div style="padding:10px 16px;border-bottom:1px solid #1a2e20;display:flex;align-items:center;gap:10px;opacity:${isWD?.35:1}">
+      <div class="lb-pos" style="font-size:16px;color:${rankColor}">${p.rank}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${pl?pl.f:""} ${h(p.name)}
+          ${i===0&&!isWD?`<span class="caddie-crown">⛳ CADDIE PICK</span>`:""}
+          ${isWD?`<span class="wd-badge">WD</span>`:""}
+        </div>
+        <div style="font-size:11px;color:#6b8f76;margin-top:1px">${h(p.note||"")}</div>
+      </div>
+      ${tierBadge(p.tier)}
+      <div style="text-align:right;min-width:60px">
+        <div style="font-size:14px;font-weight:700;color:${isWD?"#6b8f76":"#f5d97a"};font-family:'DM Mono',monospace">${isWD?"WD":p.prob+"%"}</div>
+        <div style="font-size:10px;color:#6b8f76">${isWD?"withdrawn":"top-10"}</div>
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // Right col: odds snapshot + schedule
+  html+=`<div style="display:flex;flex-direction:column;gap:14px">`;
+
+  // Top 5 odds comparison
+  html+=`<div class="panel">
+    <div class="panel-header">Odds Comparison</div>
+    <div style="padding:14px">
+      <div style="display:grid;grid-template-columns:1fr repeat(4,auto);gap:0;font-size:10px;color:#6b8f76;font-family:'DM Mono',monospace;text-transform:uppercase;margin-bottom:8px;padding:0 4px">
+        <span>Player</span><span style="text-align:center;padding:0 6px">DK</span><span style="text-align:center;padding:0 6px">FD</span><span style="text-align:center;padding:0 6px">MGM</span><span style="text-align:center;padding:0 6px">Best</span>
+      </div>`;
+  PLAYERS.filter(p=>state.ranker.find(r=>r.name===p.name&&(r.prob||0)>0&&!r.note?.includes("❌ WD"))).slice(0,6).forEach(p=>{
+    const best=[p.books.dk,p.books.fd,p.books.mgm].map(o=>parseInt(o)).reduce((a,b)=>b>a?b:a,0);
+    const bestStr="+"+best;
+    html+=`<div style="display:grid;grid-template-columns:1fr repeat(4,auto);gap:0;align-items:center;padding:6px 4px;border-top:1px solid #1a2e20">
+      <span style="font-size:12px;font-weight:500">${p.f} ${h(p.name.split(" ").pop())}</span>
+      <span style="text-align:center;padding:0 6px;font-family:'DM Mono',monospace;font-size:12px;color:#6b8f76">${h(p.books.dk)}</span>
+      <span style="text-align:center;padding:0 6px;font-family:'DM Mono',monospace;font-size:12px;color:#6b8f76">${h(p.books.fd)}</span>
+      <span style="text-align:center;padding:0 6px;font-family:'DM Mono',monospace;font-size:12px;color:#6b8f76">${h(p.books.mgm)}</span>
+      <span style="text-align:center;padding:0 6px;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#86efac">${h(bestStr)}</span>
+    </div>`;
+  });
+  html+=`</div></div>`;
+
+  // Upcoming events
+  html+=`<div class="panel" style="padding:16px">
+    <div style="font-weight:600;font-size:14px;margin-bottom:12px">Upcoming Events</div>`;
+  SCHEDULE.slice(0,6).forEach(s=>{
+    html+=`<div class="upcoming-row">
+      <div>
+        <div style="font-size:12px;font-weight:500;color:${s.major?"#d4af37":s.curr?"#86efac":"#e8f0eb"}">${s.curr?`<span class="live-dot"></span>`:""}${h(s.name.split(" ").slice(0,3).join(" "))}${s.major?" 🏆":""}</div>
+        <div style="font-size:10px;color:#6b8f76">${s.dates} · ${h(s.course)}</div>
+      </div>
+    </div>`;
+  });
+  html+=`</div></div></div>`;
+
+  container.innerHTML=html;
+  const vr=container.querySelector("#btn-view-ranker");
+  if(vr) vr.onclick=()=>{state.view="ranker";render();};
+}
+
+// ── RANKER ────────────────────────────────────────────────────────────────
+function renderRanker(container){
+  const maxP=Math.max(...state.ranker.map(x=>x.prob||0),1);
+  const tkeys=Object.keys(TIERS);
+  let html=`<div class="tier-legend">`;
+  tkeys.forEach(t=>{const cnt=state.ranker.filter(p=>p.tier===t).length;if(cnt) html+=`<span class="tier ${TIERS[t]||"tier-Value"}">${t} · ${cnt}</span>`;});
+  html+=`</div>`;
+
+  html+=`<div class="panel"><table>
+    <thead><tr>
+      <th style="text-align:center;width:44px">#</th>
+      <th style="text-align:left">Player</th>
+      <th style="text-align:center">Tier</th>
+      <th>Top-10 Probability</th>
+      <th style="text-align:center">DraftKings</th>
+      <th style="text-align:center">FanDuel</th>
+      <th style="text-align:center">BetMGM</th>
+      <th style="text-align:center">Bet365</th>
+      <th style="text-align:left">Caddie Note</th>
+    </tr></thead><tbody>`;
+
+  state.ranker.forEach((p,i)=>{
+    const isWD=p.note?.includes("❌ WD")||p.prob===0;
+    const pl=PLAYERS.find(x=>x.name===p.name);
+    const pct=((p.prob||0)/maxP*100).toFixed(0);
+    const probColor=(p.prob||0)>=30?"#f5d97a":(p.prob||0)>=20?"#86efac":"#6b8f76";
+    const rankColor=i===0?"#d4af37":i===1?"#94a3b8":i===2?"#cd7f32":"#6b8f76";
+    const isCaddie=i===0&&!isWD;
+    html+=`<tr style="opacity:${isWD?.35:1}" class="${isCaddie?"caddie-row":""}">
+      <td style="text-align:center"><span class="mono" style="font-size:17px;font-weight:700;color:${rankColor}">${p.rank}</span></td>
+      <td>
+        <div style="font-weight:600;white-space:nowrap">
+          ${pl?pl.f:""} ${h(p.name)}
+          ${isCaddie?`<span class="caddie-crown">⛳ CADDIE PICK</span>`:""}
+          ${isWD?`<span class="wd-badge">WD</span>`:""}
+        </div>
+        <div style="font-size:11px;color:#6b8f76;margin-top:1px">OWGR #${pl?pl.owgr:"—"}</div>
+      </td>
+      <td style="text-align:center">${tierBadge(p.tier)}</td>
+      <td style="min-width:180px">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div class="prob-bar"><div class="prob-fill" style="width:${isWD?0:pct}%"></div></div>
+          <span class="mono" style="font-size:14px;font-weight:700;min-width:40px;text-align:right;color:${isWD?"#6b8f76":probColor}">${isWD?"WD":(p.prob||0)+"%"}</span>
+        </div>
+      </td>
+      ${["dk","fd","mgm","bet365"].map(bk=>{
+        const o=pl?.books?.[bk]||p.odds||"—";
+        return `<td style="text-align:center"><span class="odds-pill ${oddsClass(o)}">${h(o)}</span></td>`;
+      }).join("")}
+      <td style="font-size:12px;color:#6b8f76;max-width:220px">${h(p.note||"")}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  container.innerHTML=html;
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────────────────
+function renderLeaderboard(container){
+  if(!state.lbLoaded){
+    container.innerHTML=`<div style="text-align:center;padding:60px;color:#6b8f76">
+      <div style="font-size:36px;margin-bottom:12px;animation:spin 1.5s linear infinite;display:inline-block">🔄</div>
+      <div style="font-size:15px">Loading live leaderboard…</div>
+    </div>`;
+    loadLeaderboard().then(()=>renderLeaderboard(container));
+    return;
+  }
+
+  const active=state.leaderboard.filter(p=>!p.isWD&&!p.isCut);
+  const wds=state.leaderboard.filter(p=>p.isWD);
+  const cuts=state.leaderboard.filter(p=>p.isCut);
+  const hasScores=active.some(p=>p.score&&p.score!=="E"&&p.score!=="0"&&p.score!=="");
+
+  let html=``;
+
+  // Tournament header
+  html+=`<div style="background:#0f1a14;border:1px solid #1a2e20;border-radius:11px;padding:16px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#e8f0eb">${h(state.lbEvent||"Current Tournament")}</div>
+      <div style="font-size:12px;color:#6b8f76;margin-top:3px">${state.lbInProgress?`<span class="live-dot"></span><span style="color:#86efac;font-weight:600">LIVE · </span>`:``}${h(state.lbStatus||"")}</div>
+    </div>
+    <button onclick="state.lbLoaded=false;renderLeaderboard(document.getElementById('main'))" style="padding:7px 14px;background:transparent;border:1px solid #2d6a4f;border-radius:7px;color:#52b788;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">🔄 Refresh</button>
+  </div>`;
+
+  if(!hasScores&&!state.lbInProgress){
+    // Pre-tournament: show field with odds
+    html+=`<div style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.2);border-radius:9px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#f5d97a">
+      Tournament hasn't started yet — showing field with current odds. <span style="color:#86efac;font-weight:600">${state.leaderboard.length} players</span> confirmed in field via ESPN. Caddie rankings update once play begins.
+    </div>`;
+
+    // Build list: ESPN field players we have stats for, plus ESPN-only players
+    const fieldFromStats=PLAYERS.filter(p=>
+      state.field.some(f=>f===p.name.toLowerCase().trim()||f.includes(p.name.split(" ").pop().toLowerCase()))
+    );
+    // ESPN players we don't have in our database — show name only
+    const espnOnlyNames=state.leaderboard
+      .filter(c=>!PLAYERS.some(p=>state.field&&c.name.toLowerCase().includes(p.name.split(" ").pop().toLowerCase())))
+      .map(c=>c.name);
+
+    html+=`<div class="panel"><table>
+      <thead><tr>
+        <th style="text-align:center">OWGR</th>
+        <th style="text-align:left">Player</th>
+        <th style="text-align:center">Caddie T10%</th>
+        <th style="text-align:center">DraftKings</th>
+        <th style="text-align:center">FanDuel</th>
+        <th style="text-align:center">BetMGM</th>
+        <th style="text-align:center">Bet365</th>
+        <th style="text-align:center">Best Line</th>
+      </tr></thead><tbody>`;
+    fieldFromStats.sort((a,b)=>a.owgr-b.owgr).forEach(p=>{
+      const rk=state.ranker.find(r=>r.name===p.name);
+      const prob=rk?.prob||0;
+      const isWD=rk?.note?.includes("❌ WD");
+      const best=Math.max(...[p.books.dk,p.books.fd,p.books.mgm,p.books.bet365].map(o=>parseInt(o.replace(/\D/g,""))||0));
+      html+=`<tr style="opacity:${isWD?.35:1}">
+        <td style="text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:#6b8f76">${p.owgr}</td>
+        <td><div style="font-weight:600">${p.f} ${h(p.name)}${isWD?`<span class="wd-badge">WD</span>`:""}</div><div style="font-size:10px;color:${p.tour==="PGA"?"#60a5fa":"#f472b6"};margin-top:1px">${p.tour}</div></td>
+        <td style="text-align:center;font-family:'DM Mono',monospace;font-weight:700;color:${prob>=25?"#f5d97a":prob>=15?"#86efac":"#6b8f76"}">${isWD?"WD":prob?prob+"%":"—"}</td>
+        ${["dk","fd","mgm","bet365"].map(bk=>`<td style="text-align:center"><span class="odds-pill ${oddsClass(p.books[bk])}">${h(p.books[bk])}</span></td>`).join("")}
+        <td style="text-align:center"><span class="odds-pill odds-mid" style="border-color:#86efac;color:#86efac">+${best}</span></td>
+      </tr>`;
+    });
+    if(espnOnlyNames.length){
+      html+=`<tr><td colspan="8" style="padding:8px 12px;font-size:11px;color:#6b8f76;font-family:'DM Mono',monospace;background:#0a1410;text-transform:uppercase;letter-spacing:.05em">Also in field (stats not yet in database)</td></tr>`;
+      espnOnlyNames.forEach(name=>{
+        html+=`<tr><td style="text-align:center;color:#6b8f76;font-size:12px">—</td><td style="font-size:13px;font-weight:500">${h(name)}</td><td colspan="6" style="font-size:11px;color:#6b8f76">Hit Refresh to generate Caddie ranking</td></tr>`;
+      });
+    }
+    html+=`</tbody></table></div>`;
+  } else {
+    // Live/post-tournament leaderboard with odds
+    html+=`<div class="panel"><table>
+      <thead><tr>
+        <th style="text-align:center;width:50px">Pos</th>
+        <th style="text-align:left">Player</th>
+        <th style="text-align:center">Score</th>
+        <th style="text-align:center">Today</th>
+        <th style="text-align:center">Thru</th>
+        <th style="text-align:center">Caddie T10%</th>
+        <th style="text-align:center">DraftKings</th>
+        <th style="text-align:center">FanDuel</th>
+        <th style="text-align:center">BetMGM</th>
+      </tr></thead><tbody>`;
+
+    active.forEach((p,i)=>{
+      const pl=PLAYERS.find(x=>x.name===p.name);
+      const rk=state.ranker.find(r=>r.name===p.name);
+      const prob=rk?.prob||0;
+      const posColor=i===0?"pos-gold":i<3?"pos-green":"";
+      const isCaddie=rk&&state.ranker.indexOf(rk)===0&&prob>0;
+      html+=`<tr class="${isCaddie?"caddie-row":""}">
+        <td style="text-align:center"><span class="lb-pos ${posColor}">${h(p.pos||"—")}</span></td>
+        <td>
+          <div style="font-weight:600">${pl?pl.f:""} ${h(p.name)}${isCaddie?`<span class="caddie-crown">⛳</span>`:""}</div>
+          ${pl?`<div style="font-size:10px;color:${pl.tour==="PGA"?"#60a5fa":"#f472b6"};margin-top:1px">${pl.tour}</div>`:""}
+        </td>
+        <td style="text-align:center"><span class="lb-score ${scoreColor(p.score)}">${fmtScore(p.score)}</span></td>
+        <td style="text-align:center"><span class="lb-thru ${scoreColor(p.today)}">${fmtScore(p.today)||"—"}</span></td>
+        <td style="text-align:center"><span class="lb-thru">${h(p.thru||"—")}</span></td>
+        <td style="text-align:center;font-family:'DM Mono',monospace;font-weight:700;font-size:13px;color:${prob>=30?"#f5d97a":prob>=15?"#86efac":"#6b8f76"}">${prob?prob+"%":"—"}</td>
+        ${pl?["dk","fd","mgm"].map(bk=>`<td style="text-align:center"><span class="odds-pill ${oddsClass(pl.books[bk])}">${h(pl.books[bk])}</span></td>`).join(""):"<td></td><td></td><td></td>"}
+      </tr>`;
+    });
+
+    if(wds.length){
+      html+=`<tr><td colspan="9" style="padding:8px 12px;font-size:11px;color:#6b8f76;font-family:'DM Mono',monospace;background:#0a1410;text-transform:uppercase;letter-spacing:.05em">Withdrawals</td></tr>`;
+      wds.forEach(p=>{
+        html+=`<tr style="opacity:.4"><td colspan="2" style="font-size:12px;font-weight:600;color:#f87171">${h(p.name)} <span class="wd-badge">WD</span></td><td colspan="7" style="font-size:11px;color:#6b8f76">Withdrew — excluded from rankings</td></tr>`;
+      });
+    }
+    if(cuts.length){
+      html+=`<tr><td colspan="9" style="padding:8px 12px;font-size:11px;color:#6b8f76;font-family:'DM Mono',monospace;background:#0a1410;text-transform:uppercase;letter-spacing:.05em">Missed Cut</td></tr>`;
+      cuts.slice(0,8).forEach(p=>{
+        html+=`<tr style="opacity:.3"><td style="text-align:center;font-size:12px;color:#6b8f76">MC</td><td style="font-size:12px">${h(p.name)}</td><td colspan="7" style="font-size:11px;color:#6b8f76">${h(p.score||"—")}</td></tr>`;
+      });
+    }
+    html+=`</tbody></table></div>`;
+  }
+
+  container.innerHTML=html;
+}
+
+// ── MATCH ESPN NAME TO STATS DB ───────────────────────────────────────────
+function matchStats(espnName){
+  const nl=espnName.toLowerCase().trim();
+  // exact match first
+  let p=PLAYERS.find(x=>x.name.toLowerCase()===nl);
+  if(p) return p;
+  // last-name match
+  const last=nl.split(" ").pop();
+  p=PLAYERS.find(x=>x.name.toLowerCase().split(" ").pop()===last);
+  return p||null;
+}
+
+// ── PLAYERS ───────────────────────────────────────────────────────────────
+function renderPlayers(container){
+  // SOURCE OF TRUTH: ESPN field. Fall back to PLAYERS db if ESPN not loaded yet.
+  let fieldPlayers;
+  if(state.leaderboard && state.leaderboard.length>0){
+    // Build from live ESPN field — enrich with stats where available
+    fieldPlayers = state.leaderboard.map(c=>{
+      const stats = matchStats(c.name);
+      return {
+        // ESPN live data
+        espnName: c.name,
+        pos: c.pos,
+        score: c.score,
+        thru: c.thru,
+        isWD: c.isWD,
+        isCut: c.isCut,
+        posNum: c.posNum,
+        // Stats from our DB (may be null)
+        ...( stats ? {
+          id: stats.id,
+          f: stats.f,
+          name: stats.name,
+          tour: stats.tour,
+          owgr: stats.owgr,
+          sg: stats.sg,
+          app: stats.app,
+          ott: stats.ott,
+          atg: stats.atg,
+          putt: stats.putt,
+          drv: stats.drv,
+          gir: stats.gir,
+          avg: stats.avg,
+          fit: stats.fit,
+          prob: stats.prob,
+          odds: stats.odds,
+          sb: stats.sb,
+          sa: stats.sa,
+          age: stats.age,
+          books: stats.books,
+        } : {
+          id: null,
+          f: "🏌️",
+          name: c.name,
+          tour: "PGA",
+          owgr: 999,
+          sg: null, app: null, ott: null, atg: null, putt: null,
+          drv: null, gir: null, avg: null, fit: null, prob: null,
+          odds: null, sb: null, sa: null, age: null, books: null,
+        }),
+        hasStats: !!stats,
+      };
+    });
+  } else {
+    // ESPN not loaded yet — show our full PLAYERS db as placeholder
+    fieldPlayers = PLAYERS.map(p=>({...p, espnName:p.name, hasStats:true, isWD:false, isCut:false, pos:"—", score:"—", thru:"—", posNum:p.owgr}));
+  }
+
+  // Apply search filter
+  let fpl = fieldPlayers.filter(p=>!state.search || p.name.toLowerCase().includes(state.search.toLowerCase()));
+
+  // Sort
+  fpl.sort((a,b)=>{
+    const av=a[state.sortK]??( state.sortD==="asc"?Infinity:-Infinity );
+    const bv=b[state.sortK]??( state.sortD==="asc"?Infinity:-Infinity );
+    if(typeof av==="string") return state.sortD==="asc"?av.localeCompare(bv):bv.localeCompare(av);
+    return state.sortD==="asc"?av-bv:bv-av;
+  });
+
+  const haslive = state.leaderboard && state.leaderboard.length>0;
+  const fieldCount = state.leaderboard?.length||0;
+
+  const cols=[
+    {k:"owgr",l:"OWGR",align:"center",w:"54px"},
+    {k:"name",l:"Player",align:"left"},
+    ...(haslive?[{k:"score",l:"Score",align:"center"},{k:"pos",l:"Pos",align:"center"}]:[]),
+    {k:"sg",l:"SG Tot"},{k:"app",l:"SG App"},{k:"ott",l:"OTT"},{k:"atg",l:"ATG"},{k:"putt",l:"Putt"},
+    {k:"drv",l:"Drive"},{k:"gir",l:"GIR%"},{k:"avg",l:"Avg"},{k:"fit",l:"Fit"},{k:"prob",l:"T10%"},
+  ];
+
+  let html=`<div class="players-grid ${state.selPlayer?"with-panel":"no-panel"}">
+    <div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:13px">
+        <input class="search-inp" id="player-search" style="margin-bottom:0;flex:1" placeholder="🔍  Search ${fieldCount||"all"} players in field…" value="${h(state.search)}"/>
+        ${haslive?`<span style="font-size:11px;color:#86efac;white-space:nowrap;font-family:'DM Mono',monospace"><span class="live-dot"></span>${fieldCount} in field</span>`:`<span style="font-size:11px;color:#6b8f76">Loading field…</span>`}
+      </div>
+      <div class="panel"><div style="overflow-x:auto"><table><thead><tr>`;
+
+  cols.forEach(c=>{
+    const arr=state.sortK===c.k?(state.sortD==="asc"?"↑":"↓"):"↓";
+    html+=`<th data-k="${c.k}" style="text-align:${c.align||"center"};${c.w?"width:"+c.w:""};color:${state.sortK===c.k?"#f5d97a":"#6b8f76"}">${c.l} <span style="opacity:${state.sortK===c.k?1:.2}">${arr}</span></th>`;
+  });
+  html+=`<th style="text-align:center;width:80px">Odds</th></tr></thead><tbody>`;
+
+  const na=`<span style="color:#1a2e20">—</span>`;
+
+  fpl.forEach(p=>{
+    const isSel=state.selPlayer?.espnName===p.espnName;
+    const rk=state.ranker.find(r=>r.name===p.name);
+    const isWD=p.isWD||(rk?.note?.includes("❌ WD"));
+    const fitColor=p.fit>=8?"#86efac":p.fit>=6?"#d4af37":"#6b8f76";
+    const fitBg=p.fit>=8?"rgba(82,183,136,.15)":p.fit>=6?"rgba(212,175,55,.1)":"transparent";
+    const fitBd=p.fit>=8?"#52b788":p.fit>=6?"#d4af37":"#374151";
+    const probColor=p.prob>=25?"#f5d97a":p.prob>=18?"#86efac":"#6b8f76";
+    html+=`<tr data-ename="${h(p.espnName)}" style="cursor:pointer;background:${isSel?"rgba(45,106,79,.2)":"transparent"};opacity:${isWD?.35:p.isCut?.5:1}">
+      <td style="text-align:center;color:#6b8f76;font-family:'DM Mono',monospace;font-size:12px">${p.owgr<999?p.owgr:na}</td>
+      <td>
+        <div style="font-size:13px;font-weight:600;white-space:nowrap">${p.f} ${h(p.name)}${isWD?`<span class="wd-badge">WD</span>`:p.isCut?`<span class="used-badge" style="background:#555">MC</span>`:""}</div>
+        <div style="font-size:10px;font-weight:600;color:${p.tour==="PGA"?"#60a5fa":"#f472b6"};margin-top:1px">${p.tour}${!p.hasStats?` <span style="color:#6b8f76">· no stats</span>`:""}</div>
+      </td>
+      ${haslive?`
+        <td style="text-align:center"><span class="lb-score ${scoreColor(p.score)}">${fmtScore(p.score)}</span></td>
+        <td style="text-align:center"><span style="font-family:'DM Mono',monospace;font-size:12px;color:${p.pos==="1"?"#d4af37":"#6b8f76"}">${h(p.pos||"—")}</span></td>
+      `:""}
+      <td style="text-align:center" class="${p.sg!==null?sgClass(p.sg):""}">${p.sg!==null?p.sg.toFixed(2):na}</td>
+      <td style="text-align:center" class="${p.app!==null?sgClass(p.app):""}">${p.app!==null?p.app.toFixed(2):na}</td>
+      <td style="text-align:center" class="${p.ott!==null?sgClass(p.ott):""}">${p.ott!==null?p.ott.toFixed(2):na}</td>
+      <td style="text-align:center" class="${p.atg!==null?sgClass(p.atg):""}">${p.atg!==null?p.atg.toFixed(2):na}</td>
+      <td style="text-align:center" class="${p.putt!==null?sgClass(p.putt):""}">${p.putt!==null?p.putt.toFixed(2):na}</td>
+      <td style="text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:#6b8f76">${p.drv!==null?p.drv:na}</td>
+      <td style="text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:${p.gir>72?"#86efac":"#6b8f76"}">${p.gir!==null?p.gir+"%":na}</td>
+      <td style="text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:${p.avg<70?"#86efac":"#6b8f76"}">${p.avg!==null?p.avg:na}</td>
+      <td style="text-align:center">${p.fit!==null?`<span style="background:${fitBg};border:1px solid ${fitBd};color:${fitColor};padding:2px 7px;border-radius:9px;font-size:11px;font-family:'DM Mono',monospace">${p.fit}/10</span>`:na}</td>
+      <td style="text-align:center;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:${probColor}">${p.prob!==null?p.prob+"%":na}</td>
+      <td style="text-align:center">${p.odds?`<span class="odds-pill ${oddsClass(p.odds)}">${h(p.odds)}</span>`:na}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div></div></div>`;
+
+  if(state.selPlayer){
+    const p=state.selPlayer;
+    const rk=state.ranker.find(r=>r.name===p.name);
+    const isWD=p.isWD||(rk?.note?.includes("❌ WD"));
+    html+=`<div id="player-panel">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-size:15px;font-weight:700">${p.f} ${h(p.name)}${isWD?`<span class="wd-badge">WD</span>`:""}</div>
+          <div style="font-size:11px;color:#6b8f76;margin-top:2px">${p.owgr<999?`OWGR #${p.owgr} · `:``}${p.tour}${p.age?` · Age ${p.age}`:""}</div>
+        </div>
+        <button id="close-panel" style="background:none;border:none;color:#6b8f76;font-size:20px;cursor:pointer;line-height:1">×</button>
+      </div>
+      ${p.hasStats ? renderRadar(p) : `<div style="text-align:center;padding:24px 16px;color:#6b8f76;font-size:12px;border:1px dashed #1a2e20;border-radius:8px;margin-bottom:10px">Detailed stats not in database yet.<br/>Hit <strong style="color:#d4af37">Refresh</strong> for AI analysis.</div>`}
+      <div class="stat-mini-grid">
+        ${p.hasStats
+          ? [["SG Total",p.sg.toFixed(2)],["SG App",p.app.toFixed(2)],["Drive",p.drv+"y"],["GIR",p.gir+"%"],["Scoring",p.avg],["Fit",p.fit+"/10"],["T10%",(rk?.prob??p.prob)+"%"],["Odds",p.odds||"—"]].map(([l,v])=>`<div class="stat-mini"><div class="stat-mini-label">${l}</div><div class="stat-mini-val">${h(String(v))}</div></div>`).join("")
+          : [["Live Pos",p.pos||"—"],["Score",fmtScore(p.score)||"—"],["Thru",p.thru||"—"],["Caddie T10",rk?rk.prob+"%":"—"]].map(([l,v])=>`<div class="stat-mini"><div class="stat-mini-label">${l}</div><div class="stat-mini-val">${h(String(v))}</div></div>`).join("")
+        }
+      </div>
+      ${p.hasStats&&p.sb!=null?`
+        <div style="padding:8px 11px;background:rgba(212,175,55,.05);border-radius:7px;border:1px solid rgba(212,175,55,.18);margin-bottom:10px">
+          <div style="font-size:10px;color:#6b8f76;margin-bottom:3px">TPC Sawgrass History</div>
+          <div style="font-size:12px">Best: <strong style="color:${p.sb==="W"?"#d4af37":"#e8f0eb"}">${p.sb==="W"?"🏆 Winner":p.sb}</strong> · Avg Finish: ${p.sa}</div>
+        </div>`:""}
+      ${p.books?`
+        <div style="margin-bottom:6px;font-size:11px;color:#6b8f76;text-transform:uppercase;font-family:'DM Mono',monospace;letter-spacing:.06em">Win Odds by Book</div>
+        <div class="odds-row">
+          ${[["DK",p.books.dk],["FD",p.books.fd],["MGM",p.books.mgm],["B365",p.books.bet365]].map(([l,o])=>`
+            <div style="flex:1;text-align:center;background:rgba(255,255,255,.03);border-radius:7px;padding:7px 4px;border:1px solid #1a2e20">
+              <div style="font-size:9px;color:#6b8f76;margin-bottom:3px">${l}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:#86efac">${h(o)}</div>
+            </div>`).join("")}
+        </div>`:""}
+    </div>`;
+  }
+  html+=`</div>`;
+
+  container.innerHTML=html;
+  const si=container.querySelector("#player-search");
+  if(si){si.oninput=e=>{state.search=e.target.value;renderPlayers(container);};si.focus();}
+  container.querySelectorAll("th[data-k]").forEach(th=>{
+    th.onclick=()=>{if(state.sortK===th.dataset.k)state.sortD=state.sortD==="asc"?"desc":"asc";else{state.sortK=th.dataset.k;state.sortD="desc";}renderPlayers(container);};
+  });
+  container.querySelectorAll("tr[data-ename]").forEach(tr=>{
+    tr.onclick=(e)=>{
+      if(e.target.closest("button"))return;
+      const ename=tr.dataset.ename;
+      const clicked=fpl.find(p=>p.espnName===ename);
+      state.selPlayer=(state.selPlayer?.espnName===ename)?null:clicked;
+      renderPlayers(container);
+    };
+  });
+  const cp=container.querySelector("#close-panel");
+  if(cp) cp.onclick=()=>{state.selPlayer=null;renderPlayers(container);};
+}
+
+function renderRadar(p){
+  const data=[{l:"SG Tot",v:Math.min(100,Math.max(0,(p.sg+0.5)/3*100))},{l:"App",v:Math.min(100,Math.max(0,(p.app+0.3)/1.4*100))},{l:"OTT",v:Math.min(100,Math.max(0,(p.ott+0.2)/1*100))},{l:"ATG",v:Math.min(100,Math.max(0,(p.atg+0.1)/0.8*100))},{l:"Putt",v:Math.min(100,Math.max(0,(p.putt+0.3)/0.8*100))},{l:"Fit",v:p.fit/10*100}];
+  const n=data.length,cx=90,cy=90,r=60;
+  const pts=data.map((d,i)=>{const a=(i/n)*Math.PI*2-Math.PI/2;const rv=d.v/100*r;return{x:cx+rv*Math.cos(a),y:cy+rv*Math.sin(a),lx:cx+(r+16)*Math.cos(a),ly:cy+(r+16)*Math.sin(a),l:d.l};});
+  const polygon=pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const grids=[.25,.5,.75,1].map(f=>{const gp=data.map((_,i)=>{const a=(i/n)*Math.PI*2-Math.PI/2;return`${(cx+f*r*Math.cos(a)).toFixed(1)},${(cy+f*r*Math.sin(a)).toFixed(1)}`;});return`<polygon points="${gp.join(" ")}" fill="none" stroke="#1a2e20" stroke-width="1"/>`;}).join("");
+  const axes=data.map((_,i)=>{const a=(i/n)*Math.PI*2-Math.PI/2;return`<line x1="${cx}" y1="${cy}" x2="${(cx+r*Math.cos(a)).toFixed(1)}" y2="${(cy+r*Math.sin(a)).toFixed(1)}" stroke="#1a2e20" stroke-width="1"/>`;}).join("");
+  const labels=pts.map(p=>`<text x="${p.lx.toFixed(1)}" y="${p.ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#6b8f76" font-family="DM Sans,sans-serif">${p.l}</text>`).join("");
+  return`<svg width="180" height="180" viewBox="0 0 180 180" style="display:block;margin:0 auto 10px">${grids}${axes}<polygon points="${polygon}" fill="rgba(212,175,55,0.15)" stroke="#d4af37" stroke-width="2"/>${labels}</svg>`;
+}
+
+// ── PAST PERFORMANCE ──────────────────────────────────────────────────────
+function renderHistory(container){
+  const results=[...state.pastResults].sort((a,b)=>b.week-a.week);
+
+  // Compute accuracy stats across all logged results
+  let totalPredictions=0,top10Hits=0,caddiePickHits=0,top5Hits=0;
+  results.forEach(r=>{
+    if(!r.actualTop10||!r.caddieRankings) return;
+    r.caddieRankings.forEach(p=>{
+      totalPredictions++;
+      if(r.actualTop10.includes(p.name)) top10Hits++;
+    });
+    if(r.actualTop10.includes(r.caddiePick)) caddiePickHits++;
+    const top5Pred=r.caddieRankings.slice(0,5).map(p=>p.name);
+    top5Pred.forEach(n=>{ if(r.actualTop10.includes(n)) top5Hits++; });
+  });
+  const hitRate=totalPredictions>0?Math.round(top10Hits/totalPredictions*100):0;
+  const caddieRate=results.length>0?Math.round(caddiePickHits/results.length*100):0;
+
+  let html=``;
+
+  // Accuracy stat cards
+  html+=`<div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+    ${[
+      {v:results.length,l:"Tournaments",sub:"tracked so far",c:"#60a5fa"},
+      {v:caddiePickHits+"/"+results.length,l:"Caddie Pick Hit",sub:caddieRate+"% top-10 rate",c:"#d4af37"},
+      {v:hitRate+"%",l:"Top-5 Accuracy",sub:"ranked T5 → made T10",c:"#86efac"},
+      {v:top10Hits+"/"+totalPredictions,l:"Ranked Hits",sub:"in all T10 picks",c:"#c4b5fd"},
+    ].map((c,i)=>`<div class="stat-card fu" style="animation-delay:${i*.07}s;border-top:3px solid ${c.c}">
+      <div class="stat-num" style="color:${c.c};font-size:22px">${c.v}</div>
+      <div class="stat-label">${c.l}</div>
+      <div class="stat-sub">${c.sub}</div>
+    </div>`).join("")}
+  </div>`;
+
+  // Model calibration insight
+  if(results.length>0){
+    html+=`<div style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:13px 16px;margin-bottom:18px;font-size:13px;color:#f5d97a;line-height:1.6">
+      <strong>⚡ Model Feedback</strong> — Based on ${results.length} tournament${results.length>1?"s":""}: 
+      ${caddieRate>=50?"Caddie Pick is performing well above chance.":caddieRate>=33?"Caddie Pick is hitting at expected rate — model is calibrated.":"Caddie Pick is underperforming — consider weighting course history more heavily."}
+      ${hitRate>=35?" Top-5 ranked players are converting to T10 at a strong rate.":hitRate>=20?" Top-5 ranked players are converting at an average rate.":""}
+      Each new result helps the AI refine future rankings.
+    </div>`;
+  }
+
+  // Per-tournament result cards
+  if(results.length===0){
+    html+=`<div style="text-align:center;padding:60px;color:#6b8f76">
+      <div style="font-size:36px;margin-bottom:12px">📈</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">No results logged yet</div>
+      <div style="font-size:13px">After each tournament finishes, click <strong style="color:#d4af37">Log Result</strong> to record the actual top 10 and track how Caddie performed.</div>
+    </div>`;
+  } else {
+    results.forEach((r,ri)=>{
+      const picked=r.caddiePick;
+      const pickedHit=r.actualTop10?.includes(picked);
+      const rankedHits=r.caddieRankings?.filter(p=>r.actualTop10?.includes(p.name))||[];
+      const missed=r.caddieRankings?.filter(p=>!r.actualTop10?.includes(p.name))||[];
+      const surprise=r.actualTop10?.filter(n=>!r.caddieRankings?.find(p=>p.name===n))||[];
+
+      html+=`<div class="panel fu" style="animation-delay:${ri*.06}s;margin-bottom:14px">
+        <div class="panel-header" style="background:#0a1410">
+          <div>
+            <span style="font-size:11px;color:#6b8f76;font-family:'DM Mono',monospace">WEEK ${r.week} · ${r.course||""}</span>
+            <div style="font-size:15px;font-weight:700;margin-top:2px">${h(r.tournament)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:#6b8f76">Winner</div>
+            <div style="font-size:13px;font-weight:700;color:#d4af37">🏆 ${h(r.winner||"—")}</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid #1a2e20">
+          <!-- Caddie Pick result -->
+          <div style="padding:14px 16px;border-right:1px solid #1a2e20">
+            <div style="font-size:10px;color:#6b8f76;text-transform:uppercase;letter-spacing:.07em;font-family:'DM Mono',monospace;margin-bottom:6px">⛳ Caddie Pick</div>
+            <div style="font-size:14px;font-weight:700;color:${pickedHit?"#86efac":"#f87171"}">${h(picked||"—")}</div>
+            <div style="font-size:11px;margin-top:3px;color:${pickedHit?"#52b788":"#ef4444"}">${pickedHit?"✅ Made Top 10":"❌ Missed Top 10"}</div>
+            <div style="font-size:10px;color:#6b8f76;margin-top:2px">Predicted ${r.caddieProb||"—"}% chance</div>
+          </div>
+
+          <!-- Ranked players that hit -->
+          <div style="padding:14px 16px;border-right:1px solid #1a2e20">
+            <div style="font-size:10px;color:#6b8f76;text-transform:uppercase;letter-spacing:.07em;font-family:'DM Mono',monospace;margin-bottom:6px">✅ Ranked & Hit (${rankedHits.length})</div>
+            ${rankedHits.length?rankedHits.map(p=>`
+              <div style="font-size:12px;color:#86efac;margin-bottom:3px">#${p.rank} ${h(p.name)} <span style="color:#6b8f76;font-size:10px">${p.prob}%</span></div>`).join("")
+            :`<div style="font-size:12px;color:#6b8f76">None of top 5 made it</div>`}
+          </div>
+
+          <!-- Surprises not ranked -->
+          <div style="padding:14px 16px">
+            <div style="font-size:10px;color:#6b8f76;text-transform:uppercase;letter-spacing:.07em;font-family:'DM Mono',monospace;margin-bottom:6px">⚡ Surprises (${surprise.length})</div>
+            ${surprise.length?surprise.map(n=>`
+              <div style="font-size:12px;color:#f5d97a;margin-bottom:3px">${h(n)}</div>`).join("")
+            :`<div style="font-size:12px;color:#6b8f76">No major surprises</div>`}
+          </div>
+        </div>
+
+        <!-- Actual top 10 -->
+        <div style="padding:12px 16px">
+          <div style="font-size:10px;color:#6b8f76;text-transform:uppercase;letter-spacing:.07em;font-family:'DM Mono',monospace;margin-bottom:8px">Actual Top 10</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${(r.actualTop10||[]).map((n,i)=>{
+              const wasRanked=r.caddieRankings?.find(p=>p.name===n);
+              return `<span style="padding:3px 9px;border-radius:15px;font-size:11px;font-weight:600;border:1px solid ${wasRanked?"#52b788":"#6b8f76"};background:${wasRanked?"rgba(82,183,136,.12)":"transparent"};color:${wasRanked?"#86efac":"#6b8f76"}">
+                ${i+1}. ${h(n)}${wasRanked?` <span style="font-size:9px;opacity:.7">#${wasRanked.rank}</span>`:""}
+              </span>`;
+            }).join("")}
+          </div>
+          ${r.notes?`<div style="font-size:11px;color:#6b8f76;margin-top:8px;line-height:1.5;border-top:1px solid #1a2e20;padding-top:8px">${h(r.notes)}</div>`:""}
+        </div>
+      </div>`;
+    });
+  }
+
+  // Log Result button for most recent completed tournament
+  const lastDone=SCHEDULE.filter(s=>s.done).sort((a,b)=>b.w-a.w)[0];
+  if(lastDone&&!state.pastResults.find(r=>r.week===lastDone.w&&r.actualTop10?.length)){
+    html+=`<div style="text-align:center;margin-top:8px">
+      <button id="btn-log-result" style="padding:10px 24px;background:linear-gradient(135deg,#2d6a4f,#1a3c2e);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
+        + Log ${lastDone.name} Result
+      </button>
+    </div>`;
+  }
+
+  container.innerHTML=html;
+
+  const logBtn=container.querySelector("#btn-log-result");
+  if(logBtn) logBtn.onclick=()=>openLogModal(lastDone);
+}
+
+// ── LOG RESULT MODAL ──────────────────────────────────────────────────────
+function openLogModal(sched){
+  const existing=state.pastResults.find(r=>r.week===sched.w)||{};
+  const overlay=document.createElement("div");
+  overlay.className="overlay";
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;z-index:1000";
+  overlay.innerHTML=`<div class="modal" style="width:500px">
+    <div class="modal-header">
+      <div class="modal-title">Log Result — ${h(sched.name)}</div>
+      <button id="lm-close" class="modal-close">×</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="field-label">Winner</label>
+      <input class="field-inp" id="lm-winner" value="${h(existing.winner||"")}" placeholder="e.g. Rory McIlroy"/>
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="field-label">Actual Top 10 (comma separated, in order)</label>
+      <textarea class="field-inp" id="lm-top10" rows="3" placeholder="Rory McIlroy, Scottie Scheffler, Shane Lowry…">${(existing.actualTop10||[]).join(", ")}</textarea>
+    </div>
+    <div style="margin-bottom:16px">
+      <label class="field-label">Notes (optional)</label>
+      <input class="field-inp" id="lm-notes" value="${h(existing.notes||"")}" placeholder="Notable storylines, conditions, surprises…"/>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn-cancel" id="lm-cancel">Cancel</button>
+      <button class="btn-save" id="lm-save">Save Result</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  const close=()=>document.body.removeChild(overlay);
+  overlay.querySelector("#lm-close").onclick=close;
+  overlay.querySelector("#lm-cancel").onclick=close;
+  overlay.onclick=e=>{ if(e.target===overlay) close(); };
+  overlay.querySelector("#lm-save").onclick=()=>{
+    const winner=overlay.querySelector("#lm-winner").value.trim();
+    const top10=overlay.querySelector("#lm-top10").value.split(",").map(s=>s.trim()).filter(Boolean);
+    const notes=overlay.querySelector("#lm-notes").value.trim();
+    const result={
+      week:sched.w,
+      tournament:sched.name,
+      course:sched.course,
+      winner,
+      actualTop10:top10,
+      notes,
+      caddiePick:state.ranker[0]?.name||"",
+      caddieProb:state.ranker[0]?.prob||0,
+      caddieRankings:state.ranker.slice(0,5).map(p=>({rank:p.rank,name:p.name,prob:p.prob})),
+    };
+    const idx=state.pastResults.findIndex(r=>r.week===sched.w);
+    if(idx>=0) state.pastResults[idx]=result;
+    else state.pastResults.push(result);
+    sSet("pastResults",state.pastResults);
+    close();
+    render();
+    // Trigger AI to learn from new result on next refresh
+    state.aiNote=`✅ Result logged for ${sched.name} — hit Refresh to incorporate into rankings.`;
+    renderSidebar();
+  };
+}
+
+// ── SCHEDULE ──────────────────────────────────────────────────────────────
+function renderSchedule(container){
+  let html=`<div class="sched-grid">`;
+  SCHEDULE.forEach((s,i)=>{
+    html+=`<div class="sched-card${s.major?" major":""}${s.curr?" curr":""} fu" style="animation-delay:${i*.04}s">
+      ${s.major?`<div class="sched-tag major">MAJOR</div>`:""}
+      ${s.curr&&!s.major?`<div class="sched-tag curr">THIS WEEK</div>`:""}
+      <div style="font-size:11px;color:#6b8f76;font-family:'DM Mono',monospace;margin-bottom:4px">WEEK ${s.w}</div>
+      <div style="font-size:13px;font-weight:700;color:${s.major?"#d4af37":"#e8f0eb"};margin-bottom:2px;padding-right:55px">${h(s.name)}</div>
+      <div style="font-size:11px;color:#6b8f76">${h(s.course)} · ${s.dates}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+  container.innerHTML=html;
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────
+function openSettings(){
+  document.getElementById("api-key-inp").value=state.apiKey||"";
+  document.getElementById("email-inp").value=state.email||"";
+  document.getElementById("settings-modal").style.display="flex";
+}
+function closeSettings(){document.getElementById("settings-modal").style.display="none";}
+document.getElementById("btn-settings").onclick=openSettings;
+document.getElementById("settings-close").onclick=closeSettings;
+document.getElementById("settings-cancel").onclick=closeSettings;
+document.getElementById("settings-modal").onclick=function(e){if(e.target===this)closeSettings();};
+document.getElementById("settings-save").onclick=function(){
+  const k=document.getElementById("api-key-inp").value.trim();
+  const em=document.getElementById("email-inp").value.trim();
+  state.apiKey=k; sSet("apiKey",k);
+  state.email=em; sSet("email",em);
+  closeSettings(); renderSidebar();
+};
+
+// ── CLAUDE API CALL ────────────────────────────────────────────────────────
+async function callClaude(messages, tools, system){
+  const body={
+    model:"claude-sonnet-4-20250514",
+    max_tokens:4000,
+    messages,
+  };
+  if(tools&&tools.length) body.tools=tools;
+  if(system) body.system=system;
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key":state.apiKey,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true",
+    },
+    body:JSON.stringify(body),
+  });
+  return await res.json();
+}
+
+// ── FETCH LIVE ESPN SUMMARY ────────────────────────────────────────────────
+async function fetchLiveTournamentData(){
+  try{
+    const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard");
+    const data=await res.json();
+    const events=data.events||[];
+    if(!events.length) return null;
+    const event=events[0];
+    const comp=event.competitions?.[0];
+    if(!comp) return null;
+    const competitors=comp.competitors||[];
+    const withdrawn=[],cutMissed=[],active=[];
+    competitors.forEach(c=>{
+      const name=c.athlete?.displayName||"";
+      const sn=c.status?.type?.name||"";
+      const sd=c.status?.type?.shortDetail||"";
+      const score=c.score?.displayValue||"E";
+      const pos=c.status?.position?.displayName||"";
+      if(sn==="STATUS_WITHDRAWN"||sd.toLowerCase().includes("wd")) withdrawn.push(name);
+      else if(sn==="STATUS_MISSED_CUT"||sd.toLowerCase().includes("cut")) cutMissed.push({name,score});
+      else active.push({name,score,pos,posNum:parseInt((pos||"999").replace("T",""))||999});
+    });
+    active.sort((a,b)=>a.posNum-b.posNum);
+    let summary=`EVENT: ${event.name}\nSTATUS: ${comp.status?.type?.shortDetail||""}\n\n`;
+    if(withdrawn.length) summary+=`WITHDRAWALS: ${withdrawn.join(", ")}\n\n`;
+    if(cutMissed.length) summary+=`MISSED CUT: ${cutMissed.map(p=>p.name).join(", ")}\n\n`;
+    if(active.length){
+      summary+=`CURRENT LEADERBOARD:\n`;
+      active.slice(0,20).forEach(p=>{ summary+=`  ${p.pos} ${p.name} ${p.score}\n`; });
+    }
+    return{summary,eventName:event.name,withdrawn,active};
+  }catch(e){return null;}
+}
+
+// ── AGENTIC REFRESH ────────────────────────────────────────────────────────
+// Multi-turn loop: searches web for course conditions + X expert picks,
+// then generates final rankings using all context.
+document.getElementById("btn-refresh").onclick=async function(){
+  if(!state.apiKey){openSettings();return;}
+  const btn=this;
+  btn.disabled=true;
+
+  const steps=["🌐 Live scores…","🔍 Conditions…","🐦 Expert picks…","🧠 Analysing…","⛳ Rankings…"];
+  let si=0;
+  const setStep=s=>{si=Math.min(s,steps.length-1);btn.innerHTML=`<span class="spinning">🔄</span> ${steps[si]}`;};
+  setStep(0);
+
+  const live=await fetchLiveTournamentData();
+  setStep(1);
+
+  try{
+    const liveBlock=live?live.summary:"Pre-tournament — use SG stats and course fit.";
+    const fieldList=state.leaderboard.length>0
+      ?`\nCONFIRMED FIELD — ONLY rank these players:\n${state.leaderboard.map(c=>c.name).join(", ")}\n`
+      :"";
+    const eventName=state.lbEvent||(live?.eventName)||"current PGA Tour event";
+    const courseName=SCHEDULE.find(s=>s.curr)?.course||"TPC Sawgrass";
+
+    // Build past performance context for AI to learn from
+    const perfContext=state.pastResults.length>0?`
+HISTORICAL CADDIE PERFORMANCE (learn from these to improve rankings):
+${state.pastResults.map(r=>{
+  const hits=r.caddieRankings?.filter(p=>r.actualTop10?.includes(p.name))||[];
+  const misses=r.caddieRankings?.filter(p=>!r.actualTop10?.includes(p.name))||[];
+  const surprises=r.actualTop10?.filter(n=>!r.caddieRankings?.find(p=>p.name===n))||[];
+  return `• ${r.tournament}: Caddie Pick "${r.caddiePick}" ${r.actualTop10?.includes(r.caddiePick)?"✅ HIT":"❌ MISSED"}. Actual winner: ${r.winner}. Ranked players who hit T10: ${hits.map(p=>p.name).join(", ")||"none"}. Surprises we missed: ${surprises.join(", ")||"none"}.`;
+}).join("\n")}
+USE THIS: If a player type consistently surprised us (e.g. Copperhead specialists, grinders), weight them higher. If we consistently over-ranked certain profiles, adjust downward.`:"";
+
+    const systemPrompt=`You are a PGA Tour analytics AI for a golf pick'em bracket.
+Research course conditions and expert analysis via web search, then produce precise top-15 rankings.
+
+RULES:
+- ONLY include players in the confirmed field list. Never include LIV-only players.
+- Withdrawn: prob=0, note="❌ WD"
+- Missed cut: prob=0 or exclude
+- Weight: 35% leaderboard position (if in progress), 35% course conditions & fit, 30% season SG stats + expert analysis
+${perfContext}
+STAT PRIORITIES:
+SG:Approach > GIR% > Course history > SG:Putting > OTT
+Thick rough → boost GIR%, penalise low-accuracy bombers
+Fast/firm greens → boost SG:Putting elite
+Wind → boost accurate ball-strikers
+Soft/wet → distance matters more`;
+
+    const userMessage=`Research and rank the field for ${eventName} at ${courseName}.
+
+=== LIVE DATA ===
+${liveBlock}
+${fieldList}
+RESEARCH STEPS (use web_search for each):
+1. Search: "${eventName} course conditions ${new Date().getFullYear()} rough greens wind"
+2. Search: "site:x.com ronklos ${eventName}" — Ron Klos golf picks and analysis
+3. Search: "site:x.com patmayo ${eventName}" — Pat Mayo golf expert picks
+4. Search: "${eventName} player form injuries news ${new Date().getFullYear()}"
+
+After all searches, output ONLY valid JSON — no markdown, no extra text:
+{"note":"one sentence live storyline with key finding","conditions":"2-3 sentences on course conditions this week — rough, greens, wind, firmness","xInsights":"1-2 sentences on what Ron Klos or Pat Mayo flagged","players":[{"rank":1,"name":"Full Name","tier":"Elite","prob":42,"odds":"+480","note":"max 12 words why they rank here"}]}
+
+Tiers: Elite|Contender|Hot Form|Sleeper|Value|LIV Watch|Specialist
+Exactly 15 players. prob 0-99. R4 leader = 80-90% prob.`;
+
+    // ── TOOL USE LOOP ──
+    // web_search_20250305 is server-side: Anthropic executes the search and embeds
+    // tool_result blocks in the SAME response as the tool_use request.
+    // So on stop_reason="tool_use", we append the full response as an assistant turn,
+    // then add a lightweight "continue" user turn, and call again.
+    const webSearch={type:"web_search_20250305",name:"web_search"};
+    let messages=[{role:"user",content:userMessage}];
+    let finalText="";
+    let turns=0;
+
+    while(turns<8){
+      turns++;
+      const resp=await callClaude(messages,[webSearch],systemPrompt);
+
+      if(resp.error){
+        console.error("Claude error:",resp.error);
+        state.aiNote=`API error: ${resp.error.message||"check console"}`;
+        break;
+      }
+      if(!resp.content) break;
+
+      // Grab any text in this response
+      resp.content.filter(b=>b.type==="text").forEach(b=>{ finalText=b.text; });
+
+      if(resp.stop_reason==="end_turn"||resp.stop_reason==="stop_sequence") break;
+
+      if(resp.stop_reason==="tool_use"){
+        if(turns===2) setStep(2); // searching expert picks
+        else if(turns===3) setStep(3); // analysing
+        // Append full assistant response (contains tool_use + embedded tool_result)
+        messages.push({role:"assistant",content:resp.content});
+        // API requires user turn after assistant — send minimal continuation
+        messages.push({role:"user",content:[{type:"text",text:"Continue your research and then produce the final JSON rankings."}]});
+        await new Promise(r=>setTimeout(r,300));
+        continue;
+      }
+      break;
+    }
+
+    setStep(4);
+
+    // Parse JSON from final response
+    const jm=finalText.match(/\{[\s\S]*?"players"[\s\S]*?\}(?=\s*$|\s*```)/)||finalText.match(/\{[\s\S]*?"players"[\s\S]*\}/);
+    if(jm){
+      try{
+        const parsed=JSON.parse(jm[0]);
+        if(parsed.players?.length){
+          // Apply live positional probs on top of AI base probs if tournament in progress
+          const round=state.currentRound||0;
+          const players=parsed.players.map(p=>{
+            if(round>0){
+              const espn=state.leaderboard.find(c=>
+                c.name.toLowerCase()===p.name.toLowerCase()||
+                c.name.toLowerCase().includes(p.name.split(" ").pop().toLowerCase())
+              );
+              if(espn&&!espn.isWD&&!espn.isCut){
+                const lp=calcLiveT10Prob(espn,round);
+                if(lp!==null) return {...p,prob:lp};
+              }
+            }
+            return p;
+          });
+          players.sort((a,b)=>(b.prob||0)-(a.prob||0));
+          players.forEach((p,i)=>p.rank=i+1);
+          state.ranker=players;
+          sSet("ranker",players);
+          state.aiNote=parsed.note||"";
+          sSet("note",state.aiNote);
+          if(parsed.conditions){state.conditions=parsed.conditions;sSet("conditions",state.conditions);}
+          if(parsed.xInsights){state.xInsights=parsed.xInsights;sSet("xInsights",state.xInsights);}
+          const now=new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"})+" · "+new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"});
+          state.lastRefresh=now;sSet("lr",now);
+        }
+      }catch(e){ console.error("JSON parse error",e,jm[0]); state.aiNote="Parse error — try again."; }
+    } else {
+      state.aiNote="No rankings returned — try again.";
+    }
+
+  }catch(e){
+    console.error(e);
+    state.aiNote="Error — check API key in Settings.";
+  }
+
+  await loadLeaderboard();
+  btn.disabled=false;
+  btn.innerHTML="🔄 Refresh Data";
+  render();
+};
+
+// ── EMAIL REPORT ───────────────────────────────────────────────────────────
+async function sendEmailReport(isAuto){
+  if(!state.apiKey||!state.email) return;
+  const top=state.ranker.filter(p=>(p.prob||0)>0).slice(0,10);
+  const eventName=state.lbEvent||"Upcoming Tournament";
+  const subject=isAuto
+    ?`⛳ Caddie Pre-Tournament Report — ${eventName}`
+    :`⛳ Caddie Rankings — ${eventName}`;
+
+  const rankTable=top.map(p=>`${p.rank}. ${p.name} — ${p.prob}% T10 · ${p.odds||"—"} to win\n   ${p.note||""}`).join("\n\n");
+  const body=`${subject}
+
+📍 ${eventName}${SCHEDULE.find(s=>s.curr)?` · ${SCHEDULE.find(s=>s.curr).course}`:""}
+🕒 Updated: ${state.lastRefresh||new Date().toLocaleString()}
+
+${state.conditions?`🌿 COURSE CONDITIONS\n${state.conditions}\n\n`:""}${state.xInsights?`🐦 EXPERT INSIGHTS (Klos/Mayo)\n${state.xInsights}\n\n`:""}⛳ CADDIE TOP-10 PICKS\n${"─".repeat(40)}\n${rankTable}
+
+${state.aiNote?`📝 ${state.aiNote}\n\n`:""}—
+Caddie Golf Analytics · ${new Date().toLocaleDateString()}`;
+
+  try{
+    // Use Gmail MCP via Anthropic API to send the email
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-api-key":state.apiKey,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true",
+      },
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:500,
+        mcp_servers:[{type:"url",url:"https://gmail.mcp.claude.com/mcp",name:"gmail"}],
+        messages:[{role:"user",content:`Send an email with this exact subject and body. Do not modify the content.\n\nTO: ${state.email}\nSUBJECT: ${subject}\n\nBODY:\n${body}`}],
+      })
+    });
+    const d=await res.json();
+    const sent=d.content?.some(b=>b.text?.toLowerCase().includes("sent")||b.text?.toLowerCase().includes("email"));
+    return sent!==false;
+  }catch(e){
+    console.error("Email error:",e);
+    return false;
+  }
+}
+
+document.getElementById("btn-send-email").onclick=async function(){
+  if(!state.apiKey||!state.email){openSettings();return;}
+  const btn=this;
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinning">📧</span> Sending…';
+  const ok=await sendEmailReport(false);
+  btn.disabled=false;
+  btn.innerHTML=ok?"✅ Sent!":"❌ Failed — check settings";
+  setTimeout(()=>{btn.innerHTML="📧 Send Report";},3000);
+};
+
+// ── PRE-TOURNAMENT AUTO EMAIL ──────────────────────────────────────────────
+// Check if it's the day before a tournament and email hasn't been sent yet
+function checkPreTournamentEmail(){
+  if(!state.email||!state.apiKey) return;
+  const today=new Date();
+  const tomorrow=new Date(today);
+  tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr=tomorrow.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+
+  const upcoming=SCHEDULE.find(s=>{
+    if(!s.dates) return false;
+    const startDate=s.dates.split("–")[0].trim(); // e.g. "Mar 19"
+    return startDate===tomorrowStr;
+  });
+
+  if(!upcoming) return;
+
+  const emailKey=`emailSent_${upcoming.w}`;
+  const alreadySent=sGet(emailKey);
+  if(alreadySent) return;
+
+  // Only send if we have rankings and it's after 6am local time
+  const hour=today.getHours();
+  if(hour<6||state.ranker.length<5) return;
+
+  sSet(emailKey,true);
+  sendEmailReport(true).then(ok=>{
+    if(!ok) sSet(emailKey,false); // retry next load if failed
+  });
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────
+loadState();
+render();
+loadLeaderboard();
+</script>
+</body>
+</html>
