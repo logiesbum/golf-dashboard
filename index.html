@@ -287,7 +287,7 @@ const PLAYERS = [
 const SCHEDULE = [
   {w:1, name:"The Players Championship",     course:"TPC Sawgrass",          dates:"Mar 12–15",major:false,curr:false,done:true},
   {w:2, name:"Valspar Championship",          course:"Innisbrook (Copperhead)",dates:"Mar 19–22",major:false,curr:false,done:true},
-  {w:3, name:"Texas Children's Houston Open", course:"Memorial Park GC",      dates:"Mar 26–29",major:false,curr:true},
+  {w:3, name:"Texas Children's Houston Open", course:"Memorial Park GC",      dates:"Mar 26–29",major:false},
   {w:4, name:"Valero Texas Open",             course:"TPC San Antonio",       dates:"Apr 2–5",  major:false},
   {w:5, name:"Masters Tournament",            course:"Augusta National",      dates:"Apr 9–13", major:true},
   {w:6, name:"RBC Heritage",                  course:"Harbour Town GL",       dates:"Apr 17–20",major:false},
@@ -418,6 +418,34 @@ let state = {
 // ── STORAGE ───────────────────────────────────────────────────────────────
 function sGet(k){try{const v=localStorage.getItem("caddie_"+k);return v?JSON.parse(v):null;}catch{return null;}}
 function sSet(k,v){try{localStorage.setItem("caddie_"+k,JSON.stringify(v));}catch{}}
+
+// ── AUTO-DETECT CURRENT TOURNAMENT FROM DATES ──────────────────────────────
+// Parses schedule dates and sets curr:true on the right event automatically.
+// No more manual flag updates each week.
+(function autoSetCurr(){
+  const today=new Date();
+  today.setHours(0,0,0,0);
+  const yr=today.getFullYear();
+  let best=null, bestDiff=Infinity;
+  SCHEDULE.forEach(s=>{
+    s.curr=false; s.done=false;
+    if(!s.dates) return;
+    const parts=s.dates.split("–");
+    const start=new Date(`${parts[0].trim()} ${yr}`);
+    const endStr=(parts[1]||parts[0]).trim();
+    // end date may be just a number like "22" — prepend month
+    const endFull=endStr.match(/^\d+$/)
+      ? `${parts[0].trim().replace(/\d+$/,"")}${endStr} ${yr}`
+      : `${endStr} ${yr}`;
+    const end=new Date(endFull);
+    end.setHours(23,59,59);
+    if(today>end){ s.done=true; return; }
+    const diff=start-today; // positive = future, 0 = during
+    if(today>=start && today<=end){ s.curr=true; best=s; bestDiff=-1; return; }
+    if(diff>0 && diff<bestDiff){ bestDiff=diff; best=s; }
+  });
+  if(!SCHEDULE.some(s=>s.curr) && best){ best.curr=true; }
+})();
 // Players who are LIV-only and won't appear in PGA events
 const LIV_ONLY = ["cam smith","jon rahm","brooks koepka","dustin johnson","bryson dechambeau","joaquin niemann","phil mickelson","patrick reed","harold varner"];
 
@@ -455,7 +483,9 @@ function loadState(){
   // wipe ALL cached predictions — they're for the wrong event.
   const currEvent=SCHEDULE.find(s=>s.curr);
   const currName=currEvent?.name||"";
-  const rankerIsStale = state.rankerEvent && state.rankerEvent !== currName;
+  // Normalize both sides before comparing to avoid whitespace/case mismatches
+  const normCmp=s=>(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  const rankerIsStale = state.rankerEvent && normCmp(state.rankerEvent) !== normCmp(currName);
 
   if(rankerIsStale){
     ["ranker","conditions","xInsights","note","lr","rankerEvent"].forEach(k=>sSet(k,null));
@@ -610,6 +640,9 @@ function calcProjectedFinish(pos, round, scoreNum, fieldSize){
   return `T${lo}–${hi}`;
 }
 
+// Normalize player name for matching: lowercase, strip periods (J.J.->jj), collapse spaces
+function normPlayerName(n){return (n||"").toLowerCase().replace(/\./g,"").replace(/\s+/g," ").trim();}
+
 async function loadLeaderboard(){
   const data=await fetchESPN();
   if(data){
@@ -618,7 +651,7 @@ async function loadLeaderboard(){
     state.lbStatus=data.status;
     state.lbInProgress=data.inProgress;
     state.lbLoaded=true;
-    state.field=data.competitors.map(c=>c.name.toLowerCase().trim());
+    state.field=data.competitors.map(c=>normPlayerName(c.name));
     const round=detectRound(data.status);
     state.currentRound=round;
 
@@ -658,15 +691,24 @@ async function loadLeaderboard(){
     // Only filter if ESPN is showing the current scheduled event.
     // Uses a more robust match: check if any of the first 3 words overlap.
     const currSched=SCHEDULE.find(s=>s.curr);
-    const espnWords=(data.eventName||"").toLowerCase().split(" ").filter(w=>w.length>3);
-    const schedWords=(currSched?.name||"").toLowerCase().split(" ").filter(w=>w.length>3);
-    const espnMatchesCurr=espnWords.some(w=>schedWords.includes(w));
+    // Robust match: normalize names and require the LONGEST meaningful word to match
+    // e.g. "children" is unique to Texas Children's; avoids false matches on "texas"/"open"
+    const normName=n=>(n||"").toLowerCase().replace(/[^a-z0-9 ]/g,"").trim();
+    const espnNorm=normName(data.eventName);
+    const schedNorm=normName(currSched?.name||"");
+    // Extract words >5 chars (more specific) — if none, fall back to >3
+    const sigWords=s=>s.split(" ").filter(w=>w.length>5).length>0
+      ? s.split(" ").filter(w=>w.length>5)
+      : s.split(" ").filter(w=>w.length>3);
+    const espnSig=sigWords(espnNorm);
+    const schedSig=sigWords(schedNorm);
+    const espnMatchesCurr=espnSig.some(w=>schedSig.includes(w));
 
     if(espnMatchesCurr && state.field.length>5){
       // STRICT enforcement — a player not in ESPN's confirmed field has 0% T10 probability
       // Use exact full name match only, no fuzzy last-name matching
       const isInField=name=>{
-        const nl=name.toLowerCase().trim();
+        const nl=normPlayerName(name);
         return state.field.some(f=>f===nl);
       };
       const prevLen=state.ranker.length;
@@ -705,7 +747,7 @@ async function loadLeaderboard(){
     checkPreTournamentEmail();
   } else {
     const sched=SCHEDULE.find(s=>s.curr);
-    document.getElementById("tourn-name").textContent=sched?.name||"Valspar Championship";
+    document.getElementById("tourn-name").textContent=sched?.name||"—";
     document.getElementById("tourn-status").innerHTML=`<span style="color:#6b8f76">${sched?.course||"Innisbrook (Copperhead)"} · ${sched?.dates||""}</span>`;
   }
 }
@@ -2060,16 +2102,19 @@ document.getElementById("btn-refresh").onclick=async function(){
     const yr=new Date().getFullYear();
     const liveBlock=live?live.summary:`Pre-tournament — ${eventName} at ${courseName}.`;
 
+    const normEvName=n=>(n||"").toLowerCase().replace(/[^a-z0-9 ]/g,"").trim();
+    const sigEvWords=s=>s.split(" ").filter(w=>w.length>5).length>0
+      ? s.split(" ").filter(w=>w.length>5)
+      : s.split(" ").filter(w=>w.length>3);
     const espnMatchesCurr=currSched&&state.lbEvent&&
-      (state.lbEvent.toLowerCase().includes(currSched.name.toLowerCase().split(" ")[0])||
-       currSched.name.toLowerCase().includes(state.lbEvent.toLowerCase().split(" ")[0]));
+      sigEvWords(normEvName(state.lbEvent)).some(w=>sigEvWords(normEvName(currSched.name)).includes(w));
     // Build the confirmed field list — send ALL names to Claude
     const confirmedField = espnMatchesCurr && state.leaderboard.length>0
       ? state.leaderboard.map(c=>c.name)
       : [];
     const fieldNote = confirmedField.length>0
       ? `CONFIRMED FIELD — ${confirmedField.length} players (from ESPN). You MUST only rank players from this exact list. Anyone not on this list is NOT in the tournament and has 0% T10 probability:\n${confirmedField.join("\n")}`
-      : `ESPN has not confirmed the field yet. Rank the most likely Valspar Championship contenders based on PGA Tour season SG stats and Copperhead course history. Do NOT include LIV-only players (Jon Rahm, Cam Smith, Brooks Koepka, Dustin Johnson, Bryson DeChambeau, etc).`;
+      : `ESPN has not confirmed the field yet. Rank the most likely ${eventName} contenders based on PGA Tour season SG stats and Copperhead course history. Do NOT include LIV-only players (Jon Rahm, Cam Smith, Brooks Koepka, Dustin Johnson, Bryson DeChambeau, etc).`;
 
     const perfContext=state.pastResults.length>0
       ?`Past results: ${state.pastResults.slice(0,3).map(r=>{
@@ -2118,10 +2163,10 @@ CRITICAL: If a confirmed field list was provided above, you must ONLY use names 
         // No fuzzy matching. No fallback. Not in field = 0% T10. Full stop.
         let players=parsed.players;
         if(state.field && state.field.length>5){
-          const fieldSet = new Set(state.field); // exact lowercase names
+          // Normalize both sides before comparing
+          const fieldSet = new Set(state.field.map(f=>normPlayerName?.(f)||f));
           players = players.filter(p=>{
-            const nl = p.name.toLowerCase().trim();
-            // Only allow exact name match
+            const nl = (p.name||"").toLowerCase().replace(/\./g,"").replace(/\s+/g," ").trim();
             return fieldSet.has(nl);
           });
           // Don't fall back — if players < 5 it means Claude hallucinated
